@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "npx puppeteer browsers install chrome",
+    "start": "node server/index.js",
     "dev": "concurrently -n \"vite,pdf\" -c \"cyan,yellow\" \"vite\" \"node server/index.js\"",
     "dev:vite": "vite",
     "build": "vite build && npx puppeteer browsers install chrome",
