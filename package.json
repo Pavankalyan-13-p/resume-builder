@@ -7,7 +7,7 @@
     "postinstall": "npx puppeteer browsers install chrome",
     "dev": "concurrently -n \"vite,pdf\" -c \"cyan,yellow\" \"vite\" \"node server/index.js\"",
     "dev:vite": "vite",
-    "build": "vite build",
+    "build": "vite build && npx puppeteer browsers install chrome",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node server/index.js",
