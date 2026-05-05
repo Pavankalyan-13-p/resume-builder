@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "postinstall": "npx puppeteer browsers install chrome",
     "dev": "concurrently -n \"vite,pdf\" -c \"cyan,yellow\" \"vite\" \"node server/index.js\"",
     "dev:vite": "vite",
     "build": "vite build",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "docx": "^9.6.1",
+    "puppeteer": "^24.0.0",
     "file-saver": "^2.0.5",
     "firebase": "^12.12.1",
     "html2canvas": "^1.4.1",
