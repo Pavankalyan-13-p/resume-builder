@@ -15,7 +15,8 @@ async function getBrowser() {
   if (!browser || !browser.isConnected()) {
     console.log("[pdf-server] launching Puppeteer browser...");
     browser = await puppeteer.launch({
-      headless: true,
+      headless: "new",
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
