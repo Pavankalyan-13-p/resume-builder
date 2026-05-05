@@ -205,7 +205,8 @@ async function exportPDF(resume) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `PDF server error (HTTP ${response.status})`);
+    console.error("[PDF export] Server error detail:", err.detail || err);
+    throw new Error(err.detail || err.error || `PDF server error (HTTP ${response.status})`);
   }
 
   const blob = await response.blob();
