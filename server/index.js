@@ -13,11 +13,8 @@ let browser = null;
 
 async function getBrowser() {
   if (!browser || !browser.isConnected()) {
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
-    console.log("[pdf-server] Chrome path:", executablePath);
     browser = await puppeteer.launch({
       headless: "new",
-      executablePath,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
