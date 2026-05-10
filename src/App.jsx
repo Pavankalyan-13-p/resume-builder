@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo, useRef } from "react";
 import { FileText } from "lucide-react";
 import {
   AlignmentType, BorderStyle, Document, Packer,
@@ -14,6 +14,9 @@ import UpgradeModal from "./components/UpgradeModal.jsx";
 import ProfileModal from "./components/ProfileModal.jsx";
 import ImportResumeModal from "./components/ImportResumeModal.jsx";
 import Toast from "./components/Toast.jsx";
+import PdfLoadingModal from "./components/PdfLoadingModal.jsx";
+import MyResumesModal from "./components/MyResumesModal.jsx";
+import SupportModal from "./components/SupportModal.jsx";
 
 // ========== LOCAL STORAGE HELPERS ==========
 // ========== LOCAL STORAGE HELPERS (fallback for anonymous users) ==========
@@ -70,6 +73,9 @@ const SAMPLE_RESUME = {
 // ========== STALE DATA HELPERS ==========
 const STALE_NAMES = ["Alexandra Chen", "Pavan Kalyan S", "Pavan", "Pavan Kalyan", "Pawan Kalyan S", "Pawan Kalyan"];
 const isStaleDefault = (r) => r?._isSample === true || STALE_NAMES.includes(r?.personal?.name);
+const isEmptyResume = (r) =>
+  !r?.personal?.name && !r?.personal?.email && !r?.personal?.phone && !r?.personal?.title &&
+  !(r?.experience?.length) && !(r?.education?.length) && !(r?.skills?.length);
 
 // ========== ATS ANALYSIS ==========
 // ========== ATS ANALYSIS ==========
@@ -222,6 +228,8 @@ async function exportWord(resume, templateId = "classic") {
     classic:       { accent: "1A2E4A", sub: "555555", dark: "111111", darkHeader: false, headerAlign: "center", sectionStyle: "underline",    eduFirst: false },
     modern:        { accent: "0F4C75", sub: "444444", dark: "111111", darkHeader: false, headerAlign: "left",   sectionStyle: "bar",           eduFirst: false },
     minimal:       { accent: "333333", sub: "777777", dark: "222222", darkHeader: false, headerAlign: "left",   sectionStyle: "thin",          eduFirst: false },
+    sleek:         { accent: "0F766E", sub: "475569", dark: "0F172A", darkHeader: false, headerAlign: "left",   sectionStyle: "bar",           eduFirst: false },
+    canvas:        { accent: "292524", sub: "78716C", dark: "1C1917", darkHeader: false, headerAlign: "left",   sectionStyle: "thin",          eduFirst: false },
     executive:     { accent: "FFFFFF", sub: "DDDDDD", dark: "111111", darkHeader: true,  headerFill: "1A2E4A",  headerAlign: "center", sectionStyle: "boldUpper",   eduFirst: false },
     creative:      { accent: "7C3AED", sub: "555555", dark: "111111", darkHeader: false, headerAlign: "left",   sectionStyle: "boldColored",   eduFirst: false },
     technical:     { accent: "16A34A", sub: "4B5563", dark: "111111", darkHeader: false, headerAlign: "left",   sectionStyle: "code",          eduFirst: false },
@@ -670,6 +678,7 @@ export default function App() {
     currentUser, userDoc, isPremium, authLoading,
     logout, upgradeToPremium, updateUserProfile, deleteAccount,
     saveResumeToCloud, loadResumeFromCloud, trackDownload,
+    loadUserResumes, saveResumeToSubcollection, deleteResumeDoc,
   } = useAuth();
 
   // Admin role is stored in Firestore users/{uid}.role — admin always gets pro access
@@ -684,6 +693,7 @@ export default function App() {
     plan: effectivePremium ? "pro" : "free",
     photoURL: currentUser.photoURL,
     provider: userDoc?.provider || "password",
+    premiumExpiresAt: userDoc?.premiumExpiresAt || null,
   } : null;
 
   // -- UI State --
@@ -693,6 +703,16 @@ export default function App() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [toast, setToast] = useState(null); // { msg, type: 'success'|'error' }
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [myResumesOpen, setMyResumesOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [userResumes, setUserResumes] = useState([]);
+  const [resumesLoading, setResumesLoading] = useState(false);
+  const [activeResumeId, setActiveResumeId] = useState(() => lsGet("rb_resume_id") || null);
+  const pendingDownloadRef = useRef(false);
+  // Ref so auto-save timeout always reads the latest activeResumeId without stale closure
+  const activeResumeIdRef = useRef(activeResumeId);
+  useEffect(() => { activeResumeIdRef.current = activeResumeId; }, [activeResumeId]);
   const [resume, setResume] = useState(() => {
     const ls = lsGet("rb_resume");
     return (ls && !isStaleDefault(ls)) ? ls : SAMPLE_RESUME;
@@ -709,8 +729,18 @@ export default function App() {
     if (authLoading || !currentUser) return;
     (async () => {
       const { resumeData, templateId: tid } = await loadResumeFromCloud(currentUser.uid);
-      if (resumeData && !isStaleDefault(resumeData)) setResume(resumeData);
-      if (tid) setTemplateId(tid);
+
+      // Seed resumes subcollection on first login if it's empty (migration from old single-doc storage)
+      const existing = await loadUserResumes();
+      if (existing.length === 0 && resumeData && !isStaleDefault(resumeData)) {
+        const newId = await saveResumeToSubcollection(null, resumeData, tid || "classic");
+        const seeded = { id: newId, title: resumeData?.personal?.name || "My Resume", resumeData, templateId: tid || "classic", updatedAt: null };
+        setUserResumes(newId ? [seeded] : []);
+      } else {
+        setUserResumes(existing);
+      }
+      // Intentionally NOT auto-loading any resume into the editor.
+      // Users explicitly open saved resumes from "My Resumes".
     })();
   }, [currentUser, authLoading]); // eslint-disable-line
 
@@ -719,9 +749,21 @@ export default function App() {
     if (!appReady) return;
     setSaveStatus("saving");
     const t = setTimeout(async () => {
-      lsSet("rb_resume", resume);
+      const { _isSample: _stripped, ...resumeToSave } = resume;
       lsSet("rb_template", templateId);
-      if (currentUser && !isStaleDefault(resume)) await saveResumeToCloud(resume, templateId);
+      // resume._isSample is true only while SAMPLE_RESUME is unedited.
+      // Editor's up/upP strips it on the first keypress, enabling saves.
+      if (!resume._isSample && !isEmptyResume(resumeToSave)) {
+        lsSet("rb_resume", resumeToSave);
+        if (currentUser) {
+          await saveResumeToCloud(resumeToSave, templateId); // backward compat
+          const savedId = await saveResumeToSubcollection(activeResumeIdRef.current, resumeToSave, templateId);
+          if (savedId && !activeResumeIdRef.current) {
+            setActiveResumeId(savedId);
+            lsSet("rb_resume_id", savedId);
+          }
+        }
+      }
       setSaveStatus("saved");
     }, 800);
     return () => clearTimeout(t);
@@ -760,10 +802,102 @@ export default function App() {
     setImportOpen(false);
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (paymentId = null, plan = 'monthly') => {
     if (!currentUser) return;
-    await upgradeToPremium();
+    await upgradeToPremium(paymentId, plan);
     setUpgradeModal(false);
+    showToast("You're now Pro! All premium features unlocked.", "success");
+  };
+
+  // -- My Resumes handlers --
+  const handleOpenMyResumes = async () => {
+    setResumesLoading(true);
+    setMyResumesOpen(true);
+    const list = await loadUserResumes();
+    setUserResumes(list);
+    setResumesLoading(false);
+  };
+
+  const handleEditResume = (r) => {
+    setResume(r.resumeData);
+    setTemplateId(r.templateId || "classic");
+    setActiveResumeId(r.id);
+    lsSet("rb_resume_id", r.id);
+    lsSet("rb_resume", r.resumeData);
+    lsSet("rb_template", r.templateId || "classic");
+    setMyResumesOpen(false);
+    setView("builder");
+  };
+
+  const handleDownloadResumeFromModal = (r) => {
+    setResume(r.resumeData);
+    setTemplateId(r.templateId || "classic");
+    setActiveResumeId(r.id);
+    lsSet("rb_resume_id", r.id);
+    lsSet("rb_resume", r.resumeData);
+    lsSet("rb_template", r.templateId || "classic");
+    pendingDownloadRef.current = true;
+    setMyResumesOpen(false);
+    setView("builder");
+  };
+
+  // Trigger PDF once modal closes and resume is loaded
+  useEffect(() => {
+    if (!myResumesOpen && pendingDownloadRef.current) {
+      pendingDownloadRef.current = false;
+      setTimeout(() => handlePDFDownload(), 150);
+    }
+  }, [myResumesOpen]); // eslint-disable-line
+
+  const handleDeleteResume = async (id) => {
+    try {
+      await deleteResumeDoc(id);
+    } catch (err) {
+      console.error("[handleDeleteResume] Firestore delete failed:", err);
+      showToast("Failed to delete resume. Please try again.", "error");
+      return; // bail out — do NOT update local state if the cloud delete failed
+    }
+
+    const wasActive = activeResumeIdRef.current === id;
+    const updatedList = userResumes.filter(r => r.id !== id);
+    setUserResumes(updatedList);
+
+    if (wasActive) {
+      if (updatedList.length > 0) {
+        // Switch editor to the next available resume so auto-save doesn't re-create
+        const next = updatedList[0];
+        setResume(next.resumeData || EMPTY_RESUME);
+        setTemplateId(next.templateId || "classic");
+        setActiveResumeId(next.id);
+        lsSet("rb_resume_id", next.id);
+        lsSet("rb_resume", next.resumeData || EMPTY_RESUME);
+      } else {
+        // No resumes left — reset to empty so auto-save has nothing to re-create
+        setResume(EMPTY_RESUME);
+        setTemplateId("classic");
+        setActiveResumeId(null);
+        lsDel("rb_resume_id");
+        lsDel("rb_resume"); // critical: prevents auto-save from re-creating on refresh
+      }
+    }
+  };
+
+  const handleDuplicateResume = async (r) => {
+    const newId = await saveResumeToSubcollection(null, r.resumeData, r.templateId, `${r.title || "Resume"} (copy)`);
+    if (newId) {
+      const fresh = await loadUserResumes();
+      setUserResumes(fresh);
+    }
+  };
+
+  const handleNewResume = () => {
+    setResume(SAMPLE_RESUME);
+    setTemplateId("classic");
+    setActiveResumeId(null);
+    lsDel("rb_resume_id");
+    lsDel("rb_resume");
+    setMyResumesOpen(false);
+    setView("builder");
   };
 
   // Always allow template selection for preview; export is gated separately
@@ -783,6 +917,7 @@ export default function App() {
   const downloadsRemaining = effectivePremium ? Infinity : Math.max(0, 5 - dailyCount);
 
   const handlePDFDownload = async () => {
+    if (pdfGenerating) return;
     if (isPreviewLocked) { setUpgradeModal('monthly'); return; }
     const { allowed, remaining } = await trackDownload();
     if (!allowed) {
@@ -793,14 +928,18 @@ export default function App() {
     if (currentUser && remaining <= 1) {
       showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
     }
-    exportPDF(resume).catch((err) => {
+    setPdfGenerating(true);
+    try {
+      await exportPDF(resume);
+    } catch (err) {
       console.error("[PDF export]", err);
       showToast(err?.message || "PDF download failed. Please try again.", "error");
-    });
+    } finally {
+      setPdfGenerating(false);
+    }
   };
 
   const handleWordDownload = async () => {
-    if (!effectivePremium) { setUpgradeModal('monthly'); return; }
     const { allowed, remaining } = await trackDownload();
     if (!allowed) {
       showToast("Daily limit reached — 5 downloads/day on the free plan. Upgrade to Pro for unlimited.", "error");
@@ -886,6 +1025,7 @@ export default function App() {
             onStart={() => setView("builder")}
             onUpgrade={(plan) => user ? setUpgradeModal(plan || 'monthly') : setAuthModal("signup")}
             onOpenProfile={() => setProfileOpen(true)}
+            onContactSupport={() => setSupportOpen(true)}
           />
         ) : (
           <BuilderPage
@@ -903,15 +1043,31 @@ export default function App() {
             sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
             onOpenProfile={() => setProfileOpen(true)}
             onOpenImport={() => user?.plan === "pro" ? setImportOpen(true) : (user ? setUpgradeModal('monthly') : setAuthModal("signup"))}
+            onOpenMyResumes={handleOpenMyResumes}
             downloadsRemaining={downloadsRemaining}
             isPreviewLocked={isPreviewLocked}
+            isPdfLoading={pdfGenerating}
+          />
+        )}
+        <PdfLoadingModal visible={pdfGenerating} />
+        {myResumesOpen && (
+          <MyResumesModal
+            resumes={userResumes}
+            loading={resumesLoading}
+            onClose={() => setMyResumesOpen(false)}
+            onEdit={handleEditResume}
+            onDownload={handleDownloadResumeFromModal}
+            onDelete={handleDeleteResume}
+            onDuplicate={handleDuplicateResume}
+            onNew={handleNewResume}
           />
         )}
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         {authModal && <FirebaseAuthModal mode={authModal} onClose={() => setAuthModal(null)} onSwitch={(m)=>setAuthModal(m)} onSuccess={(msg) => { setAuthModal(null); showToast(msg); }} />}
         {upgradeModal && <UpgradeModal onClose={() => setUpgradeModal(false)} onUpgrade={handleUpgrade} user={user} plan={upgradeModal} />}
-        {profileOpen && <ProfileModal user={user} onClose={() => setProfileOpen(false)} onUpdate={handleUpdateProfile} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} />}
+        {profileOpen && <ProfileModal user={user} onClose={() => setProfileOpen(false)} onUpdate={handleUpdateProfile} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onContactSupport={() => { setProfileOpen(false); setSupportOpen(true); }} />}
         {importOpen && <ImportResumeModal onClose={() => setImportOpen(false)} onImport={handleImportResume} user={user} onUpgrade={() => { setImportOpen(false); user ? setUpgradeModal('monthly') : setAuthModal("signup"); }} />}
+        {supportOpen && <SupportModal user={user} onClose={() => setSupportOpen(false)} />}
       </div>
     </>
   );

@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText, Edit3, Briefcase, GraduationCap, Code, Globe, Award,
-  Sparkles, Star, User, Eye, Upload, Crown, Target, Lock, Check,
-  X, Clock, Download, LogOut, ArrowLeft, ArrowRight
+  Sparkles, Star, User, Eye, Crown, Target, Lock, Check,
+  X, Clock, Download, LogOut, ArrowLeft, ArrowRight, FolderOpen, Info
 } from "lucide-react";
 import { TEMPLATE_COMPONENTS } from "./ResumeTemplates.jsx";
 import { TEMPLATES } from "../data/resumeData.js";
@@ -12,12 +12,20 @@ import JobSuggestionsModal from "./JobSuggestionsModal.jsx";
 import CoverLetterModal from "./CoverLetterGenerator.jsx";
 import InterviewSimulator from "./InterviewSimulator.jsx";
 export default function BuilderPage(props) {
-  const { resume, setResume, templateId, onSelectTemplate, activeSection, setActiveSection, saveStatus, ats, atsOpen, setAtsOpen, user, onBackHome, onPDF, onWord, onSignIn, onSignUp, onLogout, onUpgrade, sidebarOpen, setSidebarOpen, onOpenProfile, onOpenImport, downloadsRemaining, isPreviewLocked } = props;
+  const { resume, setResume, templateId, onSelectTemplate, activeSection, setActiveSection, saveStatus, ats, atsOpen, setAtsOpen, user, onBackHome, onPDF, onWord, onSignIn, onSignUp, onLogout, onUpgrade, sidebarOpen, setSidebarOpen, onOpenProfile, onOpenImport, onOpenMyResumes, downloadsRemaining, isPreviewLocked, isPdfLoading } = props;
   const Template = TEMPLATE_COMPONENTS[templateId] || TEMPLATE_COMPONENTS["classic"];
   const [mobileTab, setMobileTab]         = useState("edit");
   const [jobModal, setJobModal]           = useState(false);
   const [clModal, setClModal]             = useState(false);
   const [interviewModal, setInterviewModal] = useState(false);
+  const [wordTip, setWordTip]             = useState(false);
+
+  useEffect(() => {
+    if (!wordTip) return;
+    const close = () => setWordTip(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [wordTip]);
 
   const sections = [
     { id: "personal", label: "Personal", icon: <User style={{ width: 14, height: 14 }} /> },
@@ -72,15 +80,7 @@ export default function BuilderPage(props) {
             {mobileTab === "edit" ? <Eye style={{ width: 14, height: 14 }} /> : <Edit3 style={{ width: 14, height: 14 }} />}
             {mobileTab === "edit" ? "Preview" : "Edit"}
           </button>
-          <button
-            className="bldr-import"
-            onClick={onOpenImport}
-            title="Import PDF or Word resume (Pro)"
-            style={{ display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", border: "1px solid #e5e5e5", background: "#fff", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, color: "#555", position: "relative" }}
-          >
-            <Upload style={{ width: 13, height: 13 }} /> Import
-            {(!user || user.plan !== "pro") && <Crown style={{ width: 10, height: 10, color: "#b84a2e", position: "absolute", top: 3, right: 3 }} />}
-          </button>
+
           <button
             className="bldr-ats"
             onClick={user ? () => setAtsOpen(true) : onSignUp}
@@ -110,36 +110,67 @@ export default function BuilderPage(props) {
           </button>
           <button
             className="bldr-interview"
-            onClick={() => { if (!user || user.plan !== "pro") { onUpgrade("monthly"); return; } setInterviewModal(true); }}
+            onClick={() => setInterviewModal(true)}
             title="Interview Simulator — Premium feature"
             style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", border: "1px solid #e5e5e5", background: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, color: "#555", position: "relative", whiteSpace: "nowrap" }}
           >
             <Star style={{ width: 14, height: 14 }} /> Simulator
             {(!user || user.plan !== "pro") && <Crown style={{ width: 10, height: 10, color: "#b84a2e", position: "absolute", top: 3, right: 3 }} />}
           </button>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-            <button
-              onClick={onPDF}
-              disabled={user && downloadsRemaining === 0}
-              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: user && downloadsRemaining === 0 ? "#9ca3af" : "#1a2e4a", color: "#fff", border: "none", cursor: user && downloadsRemaining === 0 ? "not-allowed" : "pointer", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
-            >
-              <Download style={{ width: 14, height: 14 }} /> PDF
-            </button>
-            {user && downloadsRemaining !== Infinity && (
-              <span style={{ fontSize: "0.55rem", fontWeight: 600, letterSpacing: "0.03em", color: downloadsRemaining === 0 ? "#dc2626" : downloadsRemaining <= 2 ? "#d97706" : "#6b7280", whiteSpace: "nowrap" }}>
-                {downloadsRemaining === 0 ? "Limit reached" : `${downloadsRemaining} left today`}
-              </span>
-            )}
+          {/* PDF + Word button group */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+            {/* PDF */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+              <button
+                onClick={onPDF}
+                disabled={isPdfLoading || (user && downloadsRemaining === 0)}
+                style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: isPdfLoading || (user && downloadsRemaining === 0) ? "#9ca3af" : "#1a2e4a", color: "#fff", border: "none", cursor: isPdfLoading || (user && downloadsRemaining === 0) ? "not-allowed" : "pointer", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
+              >
+                <Download style={{ width: 14, height: 14 }} /> {isPdfLoading ? "Generating..." : "PDF"}
+              </button>
+              {user && downloadsRemaining !== Infinity && (
+                <span style={{ fontSize: "0.55rem", fontWeight: 600, letterSpacing: "0.03em", color: downloadsRemaining === 0 ? "#dc2626" : downloadsRemaining <= 2 ? "#d97706" : "#6b7280", whiteSpace: "nowrap" }}>
+                  {downloadsRemaining === 0 ? "Limit reached" : `${downloadsRemaining} left today`}
+                </span>
+              )}
+            </div>
+            {/* Word + info tooltip */}
+            <div style={{ position: "relative" }}>
+              <div style={{ display: "flex", alignItems: "stretch" }}>
+                <button
+                  className="bldr-word"
+                  onClick={() => { onWord(); setWordTip(false); }}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", border: "1px solid #1a2e4a", borderRight: "none", background: "#fff", color: "#1a2e4a", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
+                >
+                  <Download style={{ width: 14, height: 14 }} /> Word
+                </button>
+                <button
+                  className="bldr-word"
+                  onMouseEnter={() => setWordTip(true)}
+                  onMouseLeave={() => setWordTip(false)}
+                  onClick={(e) => { e.stopPropagation(); setWordTip(v => !v); }}
+                  aria-label="About Word export"
+                  style={{ padding: "7px 8px", border: "1px solid #1a2e4a", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", color: "#94a3b8" }}
+                >
+                  <Info style={{ width: 12, height: 12 }} />
+                </button>
+              </div>
+              {wordTip && (
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 230, background: "#1e293b", color: "#e2e8f0", padding: "10px 13px", fontSize: "0.73rem", lineHeight: 1.55, zIndex: 200, boxShadow: "0 4px 18px rgba(0,0,0,0.22)", borderRadius: 2 }}>
+                  Word files may look slightly different depending on the device or app. Use PDF for the most accurate formatting.
+                </div>
+              )}
+            </div>
           </div>
-          <button
-            className="bldr-word"
-            onClick={onWord}
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", border: "1px solid #1a2e4a", background: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, color: "#1a2e4a", position: "relative", whiteSpace: "nowrap" }}
-          >
-            {user?.plan === "pro" ? <Download style={{ width: 14, height: 14 }} /> : <Crown style={{ width: 14, height: 14, color: "#b84a2e" }} />} Word
-          </button>
           {user ? (
             <div className="bldr-user" style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "8px", borderLeft: "1px solid #eee" }}>
+              <button
+                onClick={onOpenMyResumes}
+                title="My Resumes"
+                style={{ display: "flex", alignItems: "center", gap: "5px", padding: "5px 10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", fontSize: "0.75rem", fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}
+              >
+                <FolderOpen style={{ width: 13, height: 13 }} /> Resumes
+              </button>
               <button onClick={onOpenProfile} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: user.plan === "pro" ? "#b84a2e" : "#1a2e4a", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.75rem", fontWeight: 700 }}>
                   {user.name[0].toUpperCase()}
@@ -186,7 +217,7 @@ export default function BuilderPage(props) {
           </div>
           {/* Editor content */}
           <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
-            <Editor resume={resume} setResume={setResume} section={activeSection} templateId={templateId} onSelectTemplate={onSelectTemplate} user={user} />
+            <Editor resume={resume} setResume={setResume} section={activeSection} templateId={templateId} onSelectTemplate={onSelectTemplate} user={user} onUpgrade={onUpgrade} />
           </div>
         </aside>
 
@@ -234,8 +265,8 @@ export default function BuilderPage(props) {
         <button onClick={() => setMobileTab("preview")} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "none", cursor: "pointer", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: mobileTab === "preview" ? "#1a2e4a" : "#aaa", borderTop: mobileTab === "preview" ? "2px solid #1a2e4a" : "2px solid transparent", marginTop: "-2px" }}>
           <Eye style={{ width: 18, height: 18 }} /> Preview
         </button>
-        <button onClick={onPDF} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "#1a2e4a", cursor: "pointer", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#fff" }}>
-          <Download style={{ width: 18, height: 18 }} /> PDF
+        <button onClick={onPDF} disabled={isPdfLoading} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: isPdfLoading ? "#9ca3af" : "#1a2e4a", cursor: isPdfLoading ? "not-allowed" : "pointer", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#fff" }}>
+          <Download style={{ width: 18, height: 18 }} /> {isPdfLoading ? "Wait..." : "PDF"}
         </button>
         <button onClick={() => setJobModal(true)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "none", cursor: "pointer", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#888", position: "relative" }}>
           <Briefcase style={{ width: 16, height: 16 }} />
@@ -247,7 +278,7 @@ export default function BuilderPage(props) {
           {!user && <Lock style={{ width: 8, height: 8, color: "#888", position: "absolute", top: 5, right: "calc(50% - 12px)" }} />}
           Cover
         </button>
-        <button onClick={() => { if (!user || user.plan !== "pro") { onUpgrade("monthly"); return; } setInterviewModal(true); }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "none", cursor: "pointer", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#888", position: "relative" }}>
+        <button onClick={() => setInterviewModal(true)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "none", cursor: "pointer", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#888", position: "relative" }}>
           <Star style={{ width: 16, height: 16 }} />
           {(!user || user.plan !== "pro") && <Crown style={{ width: 8, height: 8, color: "#b84a2e", position: "absolute", top: 5, right: "calc(50% - 12px)" }} />}
           Interview

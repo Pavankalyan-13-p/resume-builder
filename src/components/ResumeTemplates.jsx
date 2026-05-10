@@ -22,6 +22,8 @@ const PL = ({ href, children, style, className }) =>
     ? <a href={href} style={{ color: "inherit", textDecoration: "none", ...style }} className={className}>{children}</a>
     : <span style={style} className={className}>{children}</span>;
 
+const JUSTIFY = { textAlign: "justify", textJustify: "inter-word" };
+
 // ========== RESUME TEMPLATES (preview components) ==========
 function TemplateClassic({ r }) {
   return (
@@ -39,7 +41,7 @@ function TemplateClassic({ r }) {
         </div>
         <div style={{ display: "block", height: "2px", width: "100%", backgroundColor: "#1a2e4a", marginTop: "16px" }}></div>
       </div>
-      {r.personal.summary && <Section title="Summary" color="#1a2e4a"><p>{r.personal.summary}</p></Section>}
+      {r.personal.summary && <Section title="Summary" color="#1a2e4a"><p style={JUSTIFY}>{r.personal.summary}</p></Section>}
       {r.experience.length > 0 && <Section title="Experience" color="#1a2e4a">{r.experience.map(e=>(
         <div key={e.id} className="mb-3">
           <div className="flex justify-between items-baseline"><div className="font-bold">{e.role}</div><div className="text-[9.5pt] italic">{e.start} - {e.end}</div></div>
@@ -93,7 +95,7 @@ function TemplateModern({ r }) {
       </header>
       <div className="grid grid-cols-[1fr_240px] gap-6 px-10 py-6">
         <div>
-          {r.personal.summary && <ModernSection title="Profile"><p>{r.personal.summary}</p></ModernSection>}
+          {r.personal.summary && <ModernSection title="Profile"><p style={JUSTIFY}>{r.personal.summary}</p></ModernSection>}
           {r.experience.length > 0 && <ModernSection title="Experience">{r.experience.map(e=>(
             <div key={e.id} className="mb-3">
               <div className="font-bold text-[10.5pt]">{e.role}</div>
@@ -143,7 +145,7 @@ function TemplateMinimal({ r }) {
           {[r.personal.email, r.personal.phone, r.personal.location, r.personal.website, r.personal.linkedin, r.personal.github].filter(Boolean).map((x,i,arr)=>(<React.Fragment key={i}><PL href={autoHref(x)}>{x}</PL>{i<arr.length-1 && <span>/</span>}</React.Fragment>))}
         </div>
       </header>
-      {r.personal.summary && <section className="mb-6"><p>{r.personal.summary}</p></section>}
+      {r.personal.summary && <section className="mb-6"><p style={JUSTIFY}>{r.personal.summary}</p></section>}
       {r.experience.length > 0 && <section className="mb-6">
         <h2 className="text-[9pt] uppercase tracking-[0.2em] mb-3" style={{ color: "#999" }}>Experience</h2>
         {r.experience.map(e=>(
@@ -203,7 +205,7 @@ function TemplateExecutive({ r }) {
         {r.personal.summary && <section className="mb-5">
           <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: "4px" }}>Executive Profile</div>
           <div style={{ display: "block", height: "2px", width: "100%", backgroundColor: "#0d2540", marginBottom: "8px" }}></div>
-          <p className="italic">{r.personal.summary}</p>
+          <p className="italic" style={JUSTIFY}>{r.personal.summary}</p>
         </section>}
         {r.experience.length > 0 && <section className="mb-5">
           <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: "4px" }}>Leadership Experience</div>
@@ -275,7 +277,7 @@ function TemplateCreative({ r }) {
         <main className="p-6">
           {r.personal.summary && <section className="mb-5">
             <h2 className="text-[12pt] font-black uppercase mb-2" style={{ color: "#7c2d12" }}>About</h2>
-            <p>{r.personal.summary}</p>
+            <p style={JUSTIFY}>{r.personal.summary}</p>
           </section>}
           {r.experience.length > 0 && <section className="mb-5">
             <h2 className="text-[12pt] font-black uppercase mb-2" style={{ color: "#7c2d12" }}>Experience</h2>
@@ -316,7 +318,7 @@ function TemplateTechnical({ r }) {
         </div>
         <div style={{ display: "block", height: "2px", width: "100%", backgroundColor: "#14532d", marginTop: "12px" }}></div>
       </div>
-      {r.personal.summary && <TechSection title="## about">{r.personal.summary}</TechSection>}
+      {r.personal.summary && <TechSection title="## about"><p style={JUSTIFY}>{r.personal.summary}</p></TechSection>}
       {r.experience.length > 0 && <TechSection title="## experience">{r.experience.map(e=>(
         <div key={e.id} className="mb-3">
           <div><span className="font-bold" style={{ color: "#14532d" }}>{e.role}</span> @ {e.company} <span style={{ color: "#888" }}>[{e.start}-{e.end}]</span></div>
@@ -353,7 +355,7 @@ function TemplateElegant({ r }) {
           {[r.personal.email, r.personal.phone, r.personal.location, r.personal.website, r.personal.linkedin, r.personal.github].filter(Boolean).map((x, i) => <PL key={i} href={autoHref(x)}>{x}</PL>)}
         </div>
       </header>
-      {r.personal.summary && <ElegantSection title="Profile" accent={accent}><p style={{ fontStyle: "italic", color: "#333" }}>{r.personal.summary}</p></ElegantSection>}
+      {r.personal.summary && <ElegantSection title="Profile" accent={accent}><p style={{ fontStyle: "italic", color: "#333", ...JUSTIFY }}>{r.personal.summary}</p></ElegantSection>}
       {r.experience.length > 0 && <ElegantSection title="Experience" accent={accent}>{r.experience.map(e => (
         <div key={e.id} style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -389,7 +391,7 @@ function ElegantSection({ title, accent, children }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: "7pt", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, color: accent }}>{title}</span>
+        <span style={{ fontSize: "8.5pt", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, color: accent }}>{title}</span>
         <div style={{ flex: 1, height: "0.5px", background: `${accent}50` }} />
       </div>
       {children}
@@ -415,7 +417,7 @@ function TemplateCorporate({ r }) {
         </div>
       </header>
       <div style={{ padding: "22px 40px" }}>
-        {r.personal.summary && <CorpSection title="Professional Summary" accent={accent}><p style={{ color: "#334155", lineHeight: 1.6 }}>{r.personal.summary}</p></CorpSection>}
+        {r.personal.summary && <CorpSection title="Professional Summary" accent={accent}><p style={{ color: "#334155", lineHeight: 1.6, ...JUSTIFY }}>{r.personal.summary}</p></CorpSection>}
         {r.experience.length > 0 && <CorpSection title="Work Experience" accent={accent}>{r.experience.map(e => (
           <div key={e.id} style={{ marginBottom: 14, paddingLeft: 12, borderLeft: `3px solid ${accent}25` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -465,63 +467,131 @@ function CorpSection({ title, accent, children }) {
 
 // Fresher / Student
 function TemplateFresher({ r }) {
-  const accent = "#1d4ed8";
+  const accent = "#2563eb";
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: "10pt", lineHeight: 1.5, color: "#1e293b" }}>
-      <header style={{ background: `linear-gradient(135deg, ${accent}, #3b82f6)`, color: "#fff", padding: "28px 36px 22px" }}>
-        <h1 style={{ fontSize: "26pt", fontWeight: 800, margin: "0 0 4px", letterSpacing: "-0.02em" }}>{r.personal.name || "Your Name"}</h1>
-        {r.personal.title && <div style={{ fontSize: "11pt", fontWeight: 400, color: "rgba(255,255,255,0.9)", marginBottom: 10 }}>{r.personal.title}</div>}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: "8.5pt", color: "rgba(255,255,255,0.8)" }}>
-          {r.personal.email && <PL href={eHref(r.personal.email)}>{r.personal.email}</PL>}
-          {r.personal.phone && <PL href={pHref(r.personal.phone)}>{r.personal.phone}</PL>}
-          {r.personal.location && <span>{r.personal.location}</span>}
-          {r.personal.github && <span>github: <PL href={uHref(r.personal.github)}>{r.personal.github}</PL></span>}
-          {r.personal.linkedin && <span>linkedin: <PL href={uHref(r.personal.linkedin)}>{r.personal.linkedin}</PL></span>}
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: "10pt", lineHeight: 1.5, color: "#0f172a" }}>
+      {/* Clean white header — no gradient, ATS-safe */}
+      <header style={{ padding: "36px 44px 18px" }}>
+        <h1 style={{ fontSize: "22pt", fontWeight: 700, margin: "0 0 3px", letterSpacing: "-0.015em", color: "#0f172a" }}>{r.personal.name || "Your Name"}</h1>
+        {r.personal.title && <div style={{ fontSize: "10.5pt", fontWeight: 500, color: accent, marginBottom: 10 }}>{r.personal.title}</div>}
+        {/* Contact row — pipe-separated, auto-linked */}
+        <div style={{ borderTop: `2px solid ${accent}`, paddingTop: 9, display: "flex", flexWrap: "wrap", fontSize: "8.5pt", color: "#475569" }}>
+          {[r.personal.email, r.personal.phone, r.personal.location, r.personal.linkedin, r.personal.github, r.personal.website]
+            .filter(Boolean)
+            .map((x, i, arr) => (
+              <React.Fragment key={i}>
+                <PL href={autoHref(x)}>{x}</PL>
+                {i < arr.length - 1 && <span style={{ margin: "0 7px", color: "#cbd5e1" }}>·</span>}
+              </React.Fragment>
+            ))}
         </div>
       </header>
-      <div style={{ padding: "20px 36px" }}>
-        {r.personal.summary && <FreshSection title="Objective" accent={accent}><p style={{ color: "#475569" }}>{r.personal.summary}</p></FreshSection>}
-        {r.education.length > 0 && <FreshSection title="Education" accent={accent}>{r.education.map(ed => (
-          <div key={ed.id} style={{ marginBottom: 12, padding: "10px 12px", background: `${accent}08`, borderLeft: `3px solid ${accent}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div><div style={{ fontWeight: 700 }}>{ed.degree}</div><div style={{ color: accent, fontSize: "9.5pt" }}>{ed.school}{ed.location && ` · ${ed.location}`}</div></div>
-              <span style={{ fontSize: "8.5pt", color: "#64748b" }}>{ed.start} - {ed.end}</span>
+
+      <div style={{ padding: "6px 44px 36px" }}>
+        {r.personal.summary && (
+          <FreshSection title="Objective" accent={accent}>
+            <p style={{ color: "#475569", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p>
+          </FreshSection>
+        )}
+
+        {/* Education first — the primary credential for freshers */}
+        {r.education.length > 0 && (
+          <FreshSection title="Education" accent={accent}>
+            {r.education.map(ed => (
+              <div key={ed.id} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: "10.5pt", color: "#0f172a" }}>{ed.degree}</span>
+                  <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>{ed.start} – {ed.end}</span>
+                </div>
+                <div style={{ color: accent, fontSize: "9.5pt", fontWeight: 500, marginTop: 1 }}>{ed.school}{ed.location && ` · ${ed.location}`}</div>
+                {ed.details && <div style={{ fontSize: "9pt", color: "#64748b", marginTop: 3 }}>{ed.details}</div>}
+              </div>
+            ))}
+          </FreshSection>
+        )}
+
+        {r.skills.length > 0 && (
+          <FreshSection title="Skills" accent={accent}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 6px" }}>
+              {r.skills.map((s, i) => (
+                <span key={i} style={{ fontSize: "9pt", color: "#1e293b", background: "#f1f5f9", borderLeft: `2.5px solid ${accent}`, padding: "2px 9px" }}>{s}</span>
+              ))}
             </div>
-            {ed.details && <div style={{ fontSize: "9pt", color: "#64748b", marginTop: 4 }}>{ed.details}</div>}
-          </div>
-        ))}</FreshSection>}
-        {r.skills.length > 0 && <FreshSection title="Technical Skills" accent={accent}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {r.skills.map((s, i) => <span key={i} style={{ padding: "3px 10px", background: `${accent}15`, color: accent, fontSize: "8.5pt", fontWeight: 600, borderRadius: 2 }}>{s}</span>)}
-          </div>
-        </FreshSection>}
-        {r.projects.length > 0 && <FreshSection title="Projects" accent={accent}>{r.projects.map(p => (
-          <div key={p.id} style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 700 }}>{p.name}{p.link && <span style={{ fontWeight: 400, fontSize: "9pt", color: accent }}> · <PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
-            {p.description && <p style={{ color: "#475569", margin: "3px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
-          </div>
-        ))}</FreshSection>}
-        {r.experience.length > 0 && <FreshSection title="Experience / Internships" accent={accent}>{r.experience.map(e => (
-          <div key={e.id} style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div><span style={{ fontWeight: 700 }}>{e.role}</span> <span style={{ color: accent }}>@ {e.company}</span></div>
-              <span style={{ fontSize: "8.5pt", color: "#64748b" }}>{e.start} - {e.end}</span>
+          </FreshSection>
+        )}
+
+        {r.projects.length > 0 && (
+          <FreshSection title="Projects" accent={accent}>
+            {r.projects.map(p => (
+              <div key={p.id} style={{ marginBottom: 10 }}>
+                <div>
+                  <span style={{ fontWeight: 700 }}>{p.name}</span>
+                  {p.link && <span style={{ fontSize: "8.5pt", color: "#64748b", marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}
+                </div>
+                {p.description && <p style={{ color: "#475569", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
+              </div>
+            ))}
+          </FreshSection>
+        )}
+
+        {r.experience.length > 0 && (
+          <FreshSection title="Experience & Internships" accent={accent}>
+            {r.experience.map(e => (
+              <div key={e.id} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <div>
+                    <span style={{ fontWeight: 700 }}>{e.role}</span>
+                    {e.company && <span style={{ color: accent, fontSize: "9.5pt", marginLeft: 6 }}>{e.company}</span>}
+                    {e.location && <span style={{ color: "#94a3b8", fontSize: "9pt" }}>{` · ${e.location}`}</span>}
+                  </div>
+                  <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>{e.start} – {e.end}</span>
+                </div>
+                <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                  {(e.bullets || []).filter(Boolean).map((b, i) => <li key={i} style={{ color: "#475569", marginBottom: 2 }}>{b}</li>)}
+                </ul>
+              </div>
+            ))}
+          </FreshSection>
+        )}
+
+        {r.certifications.length > 0 && (
+          <FreshSection title="Certifications" accent={accent}>
+            {r.certifications.map(c => (
+              <div key={c.id} style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <div>
+                  <span style={{ fontWeight: 700 }}>{c.name}</span>
+                  {c.issuer && <span style={{ color: "#64748b", fontSize: "9.5pt" }}> · {c.issuer}</span>}
+                </div>
+                {c.date && <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 8 }}>{c.date}</span>}
+              </div>
+            ))}
+          </FreshSection>
+        )}
+
+        {(r.languages || []).length > 0 && (
+          <FreshSection title="Languages" accent={accent}>
+            <div style={{ display: "flex", gap: "4px 20px", flexWrap: "wrap" }}>
+              {r.languages.map((l, i) => (
+                <span key={i} style={{ fontSize: "9.5pt" }}>
+                  <strong>{l.name}</strong>
+                  {l.level && <span style={{ color: "#94a3b8" }}> · {l.level}</span>}
+                </span>
+              ))}
             </div>
-            <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{(e.bullets || []).filter(Boolean).map((b, i) => <li key={i} style={{ color: "#475569" }}>{b}</li>)}</ul>
-          </div>
-        ))}</FreshSection>}
-        {r.certifications.length > 0 && <FreshSection title="Certifications" accent={accent}>{r.certifications.map(c => (
-          <div key={c.id} style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
-        ))}</FreshSection>}
-        {(r.languages || []).length > 0 && <FreshSection title="Languages" accent={accent}><div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>{r.languages.map((l, i) => <span key={i}>{l.name}{l.level && <span style={{ color: "#94a3b8" }}> &middot; {l.level}</span>}</span>)}</div></FreshSection>}
+          </FreshSection>
+        )}
       </div>
     </div>
   );
 }
 function FreshSection({ title, accent, children }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <h2 style={{ fontSize: "8.5pt", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: accent, margin: "0 0 8px", borderBottom: `2px solid ${accent}`, paddingBottom: 4 }}>{title}</h2>
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+        <span style={{ display: "inline-block", width: 3, height: 14, background: accent, flexShrink: 0 }} />
+        <h2 style={{ margin: 0, fontSize: "9pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#0f172a" }}>{title}</h2>
+        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+      </div>
       {children}
     </div>
   );
@@ -544,7 +614,7 @@ function TemplateInternational({ r }) {
           {r.personal.github && <span>GitHub: <PL href={uHref(r.personal.github)}>{r.personal.github}</PL></span>}
         </div>
       </header>
-      {r.personal.summary && <IntlSection title="Personal Statement" accent={accent}><p style={{ color: "#374151" }}>{r.personal.summary}</p></IntlSection>}
+      {r.personal.summary && <IntlSection title="Personal Statement" accent={accent}><p style={{ color: "#374151", ...JUSTIFY }}>{r.personal.summary}</p></IntlSection>}
       {r.experience.length > 0 && <IntlSection title="Work Experience" accent={accent}>{r.experience.map(e => (
         <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "0 16px", marginBottom: 14 }}>
           <div style={{ fontSize: "8.5pt", color: "#6b7280", paddingTop: 1 }}>{e.start} -<br />{e.end}</div>
@@ -635,7 +705,7 @@ function TemplateTwoColumn({ r }) {
       </aside>
       {/* Main */}
       <main style={{ padding: "28px 28px 28px 22px" }}>
-        {r.personal.summary && <TwoColMainSection title="Professional Summary" accent={accent}><p style={{ color: "#475569", lineHeight: 1.6 }}>{r.personal.summary}</p></TwoColMainSection>}
+        {r.personal.summary && <TwoColMainSection title="Professional Summary" accent={accent}><p style={{ color: "#475569", lineHeight: 1.6, ...JUSTIFY }}>{r.personal.summary}</p></TwoColMainSection>}
         {r.experience.length > 0 && <TwoColMainSection title="Experience" accent={accent}>{r.experience.map(e => (
           <div key={e.id} style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -679,9 +749,389 @@ function TwoColMainSection({ title, accent, children }) {
   );
 }
 
+// ── Sleek ─────────────────────────────────────────────────────────────────────
+// Free. Single-column with split header: name+title left, contact stacked right.
+// Teal accent, small square dot before section headings.
+function TemplateSleek({ r }) {
+  const accent = "#0f766e";
+  return (
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: "10pt", lineHeight: 1.5, color: "#0f172a" }}>
+      <header style={{ padding: "32px 44px 20px", borderBottom: `2.5px solid ${accent}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: "23pt", fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.01em", color: "#0f172a" }}>{r.personal.name || "Your Name"}</h1>
+            {r.personal.title && <div style={{ fontSize: "10.5pt", fontWeight: 500, color: accent }}>{r.personal.title}</div>}
+          </div>
+          <div style={{ textAlign: "right", fontSize: "8.5pt", color: "#475569", lineHeight: 1.9, flexShrink: 0 }}>
+            {r.personal.email    && <div><PL href={eHref(r.personal.email)}>{r.personal.email}</PL></div>}
+            {r.personal.phone    && <div><PL href={pHref(r.personal.phone)}>{r.personal.phone}</PL></div>}
+            {r.personal.location && <div>{r.personal.location}</div>}
+            {r.personal.linkedin && <div><PL href={uHref(r.personal.linkedin)}>{r.personal.linkedin}</PL></div>}
+            {r.personal.github   && <div><PL href={uHref(r.personal.github)}>{r.personal.github}</PL></div>}
+            {r.personal.website  && <div><PL href={uHref(r.personal.website)}>{r.personal.website}</PL></div>}
+          </div>
+        </div>
+      </header>
+      <div style={{ padding: "20px 44px 36px" }}>
+        {r.personal.summary && <SleekSection title="Summary" accent={accent}><p style={{ color: "#475569", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></SleekSection>}
+        {r.experience.length > 0 && <SleekSection title="Experience" accent={accent}>{r.experience.map(e => (
+          <div key={e.id} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</span>
+                {e.company && <span style={{ color: accent, fontSize: "9.5pt", marginLeft: 8 }}>{e.company}</span>}
+                {e.location && <span style={{ color: "#94a3b8", fontSize: "9pt" }}>{` · ${e.location}`}</span>}
+              </div>
+              <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>{e.start} – {e.end}</span>
+            </div>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{(e.bullets || []).filter(Boolean).map((b, i) => <li key={i} style={{ color: "#334155", marginBottom: 2 }}>{b}</li>)}</ul>
+          </div>
+        ))}</SleekSection>}
+        {r.education.length > 0 && <SleekSection title="Education" accent={accent}>{r.education.map(ed => (
+          <div key={ed.id} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontWeight: 700 }}>{ed.degree}</span>
+              <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>{ed.start} – {ed.end}</span>
+            </div>
+            <div style={{ color: accent, fontSize: "9.5pt", fontWeight: 500 }}>{ed.school}{ed.location && ` · ${ed.location}`}</div>
+            {ed.details && <div style={{ fontSize: "9pt", color: "#64748b", marginTop: 2 }}>{ed.details}</div>}
+          </div>
+        ))}</SleekSection>}
+        {r.skills.length > 0 && <SleekSection title="Skills" accent={accent}><p style={{ color: "#334155", margin: 0 }}>{r.skills.join("   ·   ")}</p></SleekSection>}
+        {(r.languages || []).length > 0 && <SleekSection title="Languages" accent={accent}><p style={{ color: "#334155", margin: 0 }}>{r.languages.map(l => l.level ? `${l.name} (${l.level})` : l.name).join("   ·   ")}</p></SleekSection>}
+        {r.projects.length > 0 && <SleekSection title="Projects" accent={accent}>{r.projects.map(p => (
+          <div key={p.id} style={{ marginBottom: 10 }}>
+            <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ fontSize: "8.5pt", color: accent, marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
+            {p.description && <p style={{ color: "#475569", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
+          </div>
+        ))}</SleekSection>}
+        {r.certifications.length > 0 && <SleekSection title="Certifications" accent={accent}>{r.certifications.map(c => (
+          <div key={c.id} style={{ marginBottom: 5, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <div><span style={{ fontWeight: 700 }}>{c.name}</span>{c.issuer && <span style={{ color: "#64748b", fontSize: "9.5pt" }}> · {c.issuer}</span>}</div>
+            {c.date && <span style={{ fontSize: "8.5pt", color: "#94a3b8" }}>{c.date}</span>}
+          </div>
+        ))}</SleekSection>}
+      </div>
+    </div>
+  );
+}
+function SleekSection({ title, accent, children }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+        <div style={{ width: 7, height: 7, background: accent, flexShrink: 0 }} />
+        <h2 style={{ margin: 0, fontSize: "9.5pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#0f172a" }}>{title}</h2>
+        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+// Free. Light stone sidebar (contact/skills/education) + white main content.
+// Warm charcoal palette. Different from Creative/TwoColumn which use dark sidebars.
+function TemplateCanvas({ r }) {
+  const dark    = "#1c1917";
+  const muted   = "#78716c";
+  const faint   = "#a8a29e";
+  const sidebar = "#f5f5f4";
+  return (
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: "10pt", lineHeight: 1.5, color: dark, display: "grid", gridTemplateColumns: "178px 1fr" }}>
+      {/* Sidebar */}
+      <aside style={{ background: sidebar, padding: "30px 16px", borderRight: "1px solid #e7e5e4", minHeight: "100%" }}>
+        <div style={{ paddingBottom: 16, marginBottom: 16, borderBottom: `2px solid ${dark}` }}>
+          <h1 style={{ fontSize: "13pt", fontWeight: 700, color: dark, margin: "0 0 3px", lineHeight: 1.25 }}>{r.personal.name || "Your Name"}</h1>
+          {r.personal.title && <div style={{ fontSize: "8pt", color: muted, lineHeight: 1.45, fontWeight: 400 }}>{r.personal.title}</div>}
+        </div>
+        <CanvasSideSection title="Contact">
+          <div style={{ fontSize: "8pt", color: muted, lineHeight: 1.9 }}>
+            {r.personal.email    && <div><PL href={eHref(r.personal.email)}>{r.personal.email}</PL></div>}
+            {r.personal.phone    && <div><PL href={pHref(r.personal.phone)}>{r.personal.phone}</PL></div>}
+            {r.personal.location && <div>{r.personal.location}</div>}
+            {r.personal.linkedin && <div><PL href={uHref(r.personal.linkedin)}>{r.personal.linkedin}</PL></div>}
+            {r.personal.github   && <div><PL href={uHref(r.personal.github)}>{r.personal.github}</PL></div>}
+            {r.personal.website  && <div><PL href={uHref(r.personal.website)}>{r.personal.website}</PL></div>}
+          </div>
+        </CanvasSideSection>
+        {r.skills.length > 0 && <CanvasSideSection title="Skills">
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {r.skills.map((s, i) => <span key={i} style={{ fontSize: "8.5pt", color: dark }}>{s}</span>)}
+          </div>
+        </CanvasSideSection>}
+        {r.education.length > 0 && <CanvasSideSection title="Education">
+          {r.education.map(ed => (
+            <div key={ed.id} style={{ marginBottom: 10, fontSize: "8.5pt" }}>
+              <div style={{ fontWeight: 700, color: dark, lineHeight: 1.3 }}>{ed.degree}</div>
+              <div style={{ color: muted, lineHeight: 1.4 }}>{ed.school}</div>
+              <div style={{ color: faint }}>{ed.start} – {ed.end}</div>
+              {ed.details && <div style={{ color: muted, marginTop: 2, fontSize: "8pt" }}>{ed.details}</div>}
+            </div>
+          ))}
+        </CanvasSideSection>}
+        {(r.languages || []).length > 0 && <CanvasSideSection title="Languages">
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {r.languages.map((l, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "8.5pt" }}>
+                <span style={{ color: dark }}>{l.name}</span>
+                {l.level && <span style={{ color: faint, fontSize: "7.5pt" }}>{l.level}</span>}
+              </div>
+            ))}
+          </div>
+        </CanvasSideSection>}
+      </aside>
+      {/* Main */}
+      <main style={{ padding: "30px 28px 30px 22px", background: "#fff" }}>
+        {r.personal.summary && <CanvasMainSection title="Profile"><p style={{ color: "#44403c", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></CanvasMainSection>}
+        {r.experience.length > 0 && <CanvasMainSection title="Experience">{r.experience.map(e => (
+          <div key={e.id} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</span>
+                {e.company && <span style={{ color: "#57534e", fontSize: "9.5pt", marginLeft: 6 }}>{e.company}</span>}
+                {e.location && <span style={{ color: faint, fontSize: "9pt" }}>{` · ${e.location}`}</span>}
+              </div>
+              <span style={{ fontSize: "8.5pt", color: faint, whiteSpace: "nowrap", flexShrink: 0 }}>{e.start} – {e.end}</span>
+            </div>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{(e.bullets || []).filter(Boolean).map((b, i) => <li key={i} style={{ color: "#44403c", marginBottom: 2 }}>{b}</li>)}</ul>
+          </div>
+        ))}</CanvasMainSection>}
+        {r.projects.length > 0 && <CanvasMainSection title="Projects">{r.projects.map(p => (
+          <div key={p.id} style={{ marginBottom: 10 }}>
+            <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ fontSize: "8.5pt", color: muted, marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
+            {p.description && <p style={{ color: "#57534e", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
+          </div>
+        ))}</CanvasMainSection>}
+        {r.certifications.length > 0 && <CanvasMainSection title="Certifications">{r.certifications.map(c => (
+          <div key={c.id} style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <div><span style={{ fontWeight: 700 }}>{c.name}</span>{c.issuer && <span style={{ color: muted, fontSize: "9.5pt" }}> · {c.issuer}</span>}</div>
+            {c.date && <span style={{ fontSize: "8.5pt", color: faint }}>{c.date}</span>}
+          </div>
+        ))}</CanvasMainSection>}
+      </main>
+    </div>
+  );
+}
+function CanvasSideSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <h2 style={{ margin: "0 0 6px", fontSize: "7.5pt", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, color: "#1c1917" }}>{title}</h2>
+      <div style={{ height: "0.5px", background: "#d6d3d1", marginBottom: 7 }} />
+      {children}
+    </div>
+  );
+}
+function CanvasMainSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <h2 style={{ margin: "0 0 9px", fontSize: "9.5pt", fontWeight: 700, color: "#1c1917", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: 5, borderBottom: "1px solid #d6d3d1" }}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+// ── Apex ─────────────────────────────────────────────────────────────────────
+// Premium. Single-column, Source Serif Pro, clean white throughout.
+// Blue accent with gradient-underline section headings. Finance / consulting feel.
+function TemplateApex({ r }) {
+  const accent = "#2563eb";
+  const muted  = "#64748b";
+  const faint  = "#94a3b8";
+  return (
+    <div style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: "10.5pt", lineHeight: 1.55, color: "#1e293b", padding: "44px 52px" }}>
+      <header style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: "27pt", fontWeight: 300, letterSpacing: "0.04em", margin: "0 0 5px", color: "#0f172a" }}>{r.personal.name || "Your Name"}</h1>
+        {r.personal.title && <div style={{ fontSize: "11pt", fontWeight: 600, color: accent, letterSpacing: "0.03em", marginBottom: 10 }}>{r.personal.title}</div>}
+        <div style={{ height: "1.5px", background: `linear-gradient(90deg, ${accent}, ${accent}35 60%, transparent)`, marginBottom: 10 }} />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0 22px", fontSize: "8.5pt", color: muted }}>
+          {r.personal.email    && <PL href={eHref(r.personal.email)}>{r.personal.email}</PL>}
+          {r.personal.phone    && <PL href={pHref(r.personal.phone)}>{r.personal.phone}</PL>}
+          {r.personal.location && <span>{r.personal.location}</span>}
+          {r.personal.linkedin && <PL href={uHref(r.personal.linkedin)}>{r.personal.linkedin}</PL>}
+          {r.personal.github   && <PL href={uHref(r.personal.github)}>{r.personal.github}</PL>}
+          {r.personal.website  && <PL href={uHref(r.personal.website)}>{r.personal.website}</PL>}
+        </div>
+      </header>
+      {r.personal.summary && <ApexSection title="Profile" accent={accent}><p style={{ color: "#334155", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></ApexSection>}
+      {r.experience.length > 0 && <ApexSection title="Experience" accent={accent}>{r.experience.map(e => (
+        <div key={e.id} style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</span>
+            <span style={{ fontSize: "9pt", color: faint, whiteSpace: "nowrap", flexShrink: 0, fontStyle: "italic" }}>{e.start} – {e.end}</span>
+          </div>
+          <div style={{ color: accent, fontSize: "9.5pt", fontWeight: 500, marginBottom: 5 }}>{e.company}{e.location && ` · ${e.location}`}</div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>{(e.bullets || []).filter(Boolean).map((b, i) => <li key={i} style={{ color: "#475569", marginBottom: 3 }}>{b}</li>)}</ul>
+        </div>
+      ))}</ApexSection>}
+      {r.education.length > 0 && <ApexSection title="Education" accent={accent}>{r.education.map(ed => (
+        <div key={ed.id} style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontWeight: 700 }}>{ed.degree}</span>
+            <span style={{ fontSize: "9pt", color: faint, whiteSpace: "nowrap", flexShrink: 0, fontStyle: "italic" }}>{ed.start} – {ed.end}</span>
+          </div>
+          <div style={{ color: accent, fontSize: "9.5pt", fontWeight: 500 }}>{ed.school}{ed.location && ` · ${ed.location}`}</div>
+          {ed.details && <div style={{ fontSize: "9pt", color: muted, marginTop: 2 }}>{ed.details}</div>}
+        </div>
+      ))}</ApexSection>}
+      {r.skills.length > 0 && <ApexSection title="Skills" accent={accent}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 8px" }}>
+          {r.skills.map((s, i) => <span key={i} style={{ padding: "3px 10px", background: `${accent}0d`, color: accent, fontSize: "9pt", fontWeight: 500, border: `1px solid ${accent}25` }}>{s}</span>)}
+        </div>
+      </ApexSection>}
+      {(r.languages || []).length > 0 && <ApexSection title="Languages" accent={accent}><p style={{ color: "#475569", margin: 0 }}>{r.languages.map(l => l.level ? `${l.name} (${l.level})` : l.name).join("   ·   ")}</p></ApexSection>}
+      {r.projects.length > 0 && <ApexSection title="Projects" accent={accent}>{r.projects.map(p => (
+        <div key={p.id} style={{ marginBottom: 10 }}>
+          <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ color: accent, fontSize: "8.5pt", marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
+          {p.description && <p style={{ color: "#475569", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
+        </div>
+      ))}</ApexSection>}
+      {r.certifications.length > 0 && <ApexSection title="Certifications" accent={accent}>{r.certifications.map(c => (
+        <div key={c.id} style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div><span style={{ fontWeight: 700 }}>{c.name}</span>{c.issuer && <span style={{ color: muted, fontSize: "9.5pt" }}> · {c.issuer}</span>}</div>
+          {c.date && <span style={{ fontSize: "8.5pt", color: faint }}>{c.date}</span>}
+        </div>
+      ))}</ApexSection>}
+    </div>
+  );
+}
+function ApexSection({ title, accent, children }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <div style={{ marginBottom: 11 }}>
+        <h2 style={{ margin: "0 0 5px", fontSize: "9.5pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: accent }}>{title}</h2>
+        <div style={{ height: "1.5px", background: `linear-gradient(90deg, ${accent} 0%, ${accent}30 40%, transparent 100%)` }} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Meridian ──────────────────────────────────────────────────────────────────
+// Premium. Bold full-width header (huge name left + contact right), then
+// main content (left) + info panel (right). Right panel layout — reversed from
+// all other templates. Sky-700 accent, all-light palette, Inter.
+function TemplateMeridian({ r }) {
+  const accent = "#0369a1";
+  const panel  = "#F1F5F9"; // slate-100
+  const text   = "#0f172a";
+  const muted  = "#475569";
+  const faint  = "#94a3b8";
+  return (
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: "10pt", lineHeight: 1.55, color: text }}>
+
+      {/* ── Full-width header ── */}
+      <header style={{ padding: "26px 36px 22px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, borderBottom: `3px solid ${accent}` }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{ fontSize: "25pt", fontWeight: 800, letterSpacing: "-0.025em", margin: "0 0 5px", color: text, lineHeight: 1.05 }}>{r.personal.name || "Your Name"}</h1>
+          {r.personal.title && <div style={{ fontSize: "10.5pt", fontWeight: 500, color: accent, letterSpacing: "0.01em" }}>{r.personal.title}</div>}
+        </div>
+        <div style={{ textAlign: "right", fontSize: "8.5pt", color: muted, lineHeight: 1.95, flexShrink: 0, paddingTop: 3 }}>
+          {r.personal.email    && <div><PL href={eHref(r.personal.email)}>{r.personal.email}</PL></div>}
+          {r.personal.phone    && <div><PL href={pHref(r.personal.phone)}>{r.personal.phone}</PL></div>}
+          {r.personal.location && <div>{r.personal.location}</div>}
+          {r.personal.linkedin && <div><PL href={uHref(r.personal.linkedin)}>{r.personal.linkedin}</PL></div>}
+          {r.personal.github   && <div><PL href={uHref(r.personal.github)}>{r.personal.github}</PL></div>}
+          {r.personal.website  && <div><PL href={uHref(r.personal.website)}>{r.personal.website}</PL></div>}
+        </div>
+      </header>
+
+      {/* ── Body: main (left) + info panel (right) ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 205px" }}>
+
+        {/* Main — white */}
+        <main style={{ padding: "22px 24px 32px 36px" }}>
+          {r.personal.summary && <MeridianMainSection title="Summary" accent={accent}><p style={{ color: muted, margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></MeridianMainSection>}
+          {r.experience.length > 0 && <MeridianMainSection title="Experience" accent={accent}>
+            {r.experience.map(e => (
+              <div key={e.id} style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "10.5pt", color: text }}>{e.role}</div>
+                    <div style={{ color: accent, fontSize: "9.5pt", fontWeight: 600, marginTop: 1 }}>{e.company}{e.location && ` · ${e.location}`}</div>
+                  </div>
+                  <div style={{ fontSize: "8pt", color: faint, whiteSpace: "nowrap", flexShrink: 0, marginTop: 3, background: `${accent}0d`, padding: "2px 7px", borderRadius: 2 }}>{e.start} – {e.end}</div>
+                </div>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 17 }}>{(e.bullets || []).filter(Boolean).map((b, i) => <li key={i} style={{ color: "#334155", marginBottom: 3 }}>{b}</li>)}</ul>
+              </div>
+            ))}
+          </MeridianMainSection>}
+          {r.projects.length > 0 && <MeridianMainSection title="Projects" accent={accent}>
+            {r.projects.map(p => (
+              <div key={p.id} style={{ marginBottom: 11 }}>
+                <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ color: accent, fontSize: "8.5pt", marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
+                {p.description && <p style={{ color: muted, margin: "3px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
+              </div>
+            ))}
+          </MeridianMainSection>}
+        </main>
+
+        {/* Info panel — slate-100, right side */}
+        <aside style={{ background: panel, borderLeft: "1px solid #e2e8f0", padding: "22px 18px 32px 16px" }}>
+          {r.skills.length > 0 && <MeridianPanelSection title="Skills" accent={accent}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 5px" }}>
+              {r.skills.map((s, i) => <span key={i} style={{ fontSize: "7.5pt", background: "#fff", color: "#1e293b", padding: "2px 7px", border: "1px solid #e2e8f0", fontWeight: 500 }}>{s}</span>)}
+            </div>
+          </MeridianPanelSection>}
+          {r.education.length > 0 && <MeridianPanelSection title="Education" accent={accent}>
+            {r.education.map(ed => (
+              <div key={ed.id} style={{ marginBottom: 12, fontSize: "8.5pt" }}>
+                <div style={{ fontWeight: 700, color: text, lineHeight: 1.3 }}>{ed.degree}</div>
+                <div style={{ color: accent, fontWeight: 500, marginTop: 2 }}>{ed.school}</div>
+                <div style={{ color: faint, marginTop: 1 }}>{ed.start} – {ed.end}</div>
+                {ed.details && <div style={{ color: muted, marginTop: 2, fontSize: "7.5pt" }}>{ed.details}</div>}
+              </div>
+            ))}
+          </MeridianPanelSection>}
+          {r.certifications.length > 0 && <MeridianPanelSection title="Certifications" accent={accent}>
+            {r.certifications.map(c => (
+              <div key={c.id} style={{ marginBottom: 10, fontSize: "8.5pt" }}>
+                <div style={{ fontWeight: 700, color: text, lineHeight: 1.3 }}>{c.name}</div>
+                {c.issuer && <div style={{ color: muted, marginTop: 1 }}>{c.issuer}</div>}
+                {c.date && <div style={{ color: faint, fontSize: "7.5pt", marginTop: 1 }}>{c.date}</div>}
+              </div>
+            ))}
+          </MeridianPanelSection>}
+          {(r.languages || []).length > 0 && <MeridianPanelSection title="Languages" accent={accent}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {r.languages.map((l, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "8.5pt" }}>
+                  <span style={{ color: "#1e293b", fontWeight: 500 }}>{l.name}</span>
+                  {l.level && <span style={{ color: faint, fontSize: "7.5pt" }}>{l.level}</span>}
+                </div>
+              ))}
+            </div>
+          </MeridianPanelSection>}
+        </aside>
+
+      </div>
+    </div>
+  );
+}
+function MeridianMainSection({ title, accent, children }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, borderLeft: `3px solid ${accent}`, paddingLeft: 9 }}>
+        <h2 style={{ margin: 0, fontSize: "9pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.13em", color: "#0f172a" }}>{title}</h2>
+      </div>
+      {children}
+    </div>
+  );
+}
+function MeridianPanelSection({ title, accent, children }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <h2 style={{ margin: "0 0 4px", fontSize: "7pt", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: accent }}>{title}</h2>
+      <div style={{ height: "1px", background: `${accent}40`, marginBottom: 9 }} />
+      {children}
+    </div>
+  );
+}
+
 export const TEMPLATE_COMPONENTS = {
   classic: TemplateClassic, modern: TemplateModern, minimal: TemplateMinimal,
+  sleek: TemplateSleek, canvas: TemplateCanvas,
   executive: TemplateExecutive, creative: TemplateCreative, technical: TemplateTechnical,
   elegant: TemplateElegant, corporate: TemplateCorporate, fresher: TemplateFresher,
   international: TemplateInternational, twocolumn: TemplateTwoColumn,
+  apex: TemplateApex, meridian: TemplateMeridian,
 };

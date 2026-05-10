@@ -16,10 +16,25 @@ async function extractTextFromPDF(file) {
   const buf = await file.arrayBuffer();
   const doc = await lib.getDocument({ data: buf }).promise;
   let text = "";
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
     const content = await page.getTextContent();
-    text += content.items.map(it => it.str).join(" ") + "\n";
+    // Group items by Y position so two-column PDFs read top-to-bottom correctly.
+    // Round Y to nearest 3px to cluster items on the same visual line.
+    const lineMap = {};
+    for (const item of content.items) {
+      if (!item.str) continue;
+      const y = Math.round(item.transform[5] / 3) * 3;
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push({ x: item.transform[4], str: item.str });
+    }
+    const sortedYs = Object.keys(lineMap).map(Number).sort((a, b) => b - a);
+    for (const y of sortedYs) {
+      const lineItems = lineMap[y].sort((a, b) => a.x - b.x);
+      const lineStr = lineItems.map(it => it.str).join(" ").replace(/\s+/g, " ").trim();
+      if (lineStr) text += lineStr + "\n";
+    }
+    text += "\n";
   }
   return text;
 }
@@ -33,17 +48,19 @@ async function extractTextFromDOCX(file) {
 
 function parseResumeText(rawText) {
   const text = rawText || "";
-  const lines = text.split(/\n|\r\n/).map(l => l.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const result = {
     personal: { name:"", title:"", email:"", phone:"", location:"", website:"", linkedin:"", github:"", summary:"" },
-    experience:[], education:[], skills:[], projects:[], certifications:[]
+    experience:[], education:[], skills:[], projects:[], certifications:[], languages:[]
   };
 
-  // Extract structured fields
+  // ── 1. Reliable contact-info extraction ──────────────────────────────────
+
   const emailM = text.match(/[\w.+\-]+@[\w.\-]+\.[a-zA-Z]{2,}/);
   if (emailM) result.personal.email = emailM[0];
 
-  const phoneM = text.match(/(\+?1?\s*[\-.(]?\s*\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})/);
+  // Indian (+91) and generic international phone formats
+  const phoneM = text.match(/(\+91[\s\-]?\d{5}[\s\-]?\d{5}|\+\d{1,3}[\s\-]?\(?\d{2,5}\)?[\s\-]?\d{3,5}[\s\-]?\d{4,5}|\b[6-9]\d{9}\b|\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4})/);
   if (phoneM) result.personal.phone = phoneM[0].trim();
 
   const liM = text.match(/linkedin\.com\/in\/[\w\-]+/i);
@@ -52,76 +69,221 @@ function parseResumeText(rawText) {
   const ghM = text.match(/github\.com\/[\w\-]+/i);
   if (ghM) result.personal.github = ghM[0];
 
-  const cityM = text.match(/([A-Z][a-zA-Z\s]+,\s*[A-Z]{2}(?:\s+\d{5})?)/);
-  if (cityM) result.personal.location = cityM[0].trim();
+  const webM = text.match(/https?:\/\/(?!.*linkedin)(?!.*github)[\w.\-\/]+/i);
+  if (webM) result.personal.website = webM[0];
 
-  // Name = first long-ish line without @/digits/http
-  for (const ln of lines.slice(0, 5)) {
-    if (!ln.includes("@") && !ln.match(/\d{4}/) && !ln.startsWith("http") && ln.length >= 4 && ln.length <= 50) {
+  // Location — labeled first, then Indian city list, then generic city,state
+  const locLabel = text.match(/location\s*[:\-]\s*([^\n|]{3,50})/i);
+  if (locLabel) {
+    result.personal.location = locLabel[1].trim();
+  } else {
+    const hdr = lines.slice(0, 14).join("\n");
+    const indiaCity = hdr.match(/\b(Mumbai|Delhi|New Delhi|Bangalore|Bengaluru|Chennai|Hyderabad|Kolkata|Pune|Ahmedabad|Jaipur|Lucknow|Surat|Noida|Gurgaon|Gurugram|Chandigarh|Coimbatore|Indore|Bhopal|Nagpur|Kochi|Vizag|Visakhapatnam|Patna|Vadodara|Agra|Bhubaneswar|Thiruvananthapuram|Mysore|Ranchi|Faridabad|Ghaziabad|Ludhiana)\b[^,\n]*(,\s*[^\n|]{2,30})?/i);
+    if (indiaCity) {
+      result.personal.location = indiaCity[0].replace(/[|\n].*/g,"").trim();
+    } else {
+      // Generic "City, State/Country" only in header region
+      const cityM = hdr.match(/\b([A-Z][a-zA-Z\s]{2,20},\s*[A-Z][a-zA-Z\s]{2,20})\b/);
+      if (cityM) result.personal.location = cityM[1].trim();
+    }
+  }
+
+  // ── 2. Name and title from first few lines ────────────────────────────────
+
+  for (const ln of lines.slice(0, 6)) {
+    if (!ln.includes("@") && !/\d{5,}/.test(ln) && !ln.startsWith("http") &&
+        ln.length >= 3 && ln.length <= 55 && !/^(resume|curriculum|cv\b)/i.test(ln)) {
       result.personal.name = ln; break;
     }
   }
-  // Title = second such line
   let foundName = false;
-  for (const ln of lines.slice(0, 6)) {
+  for (const ln of lines.slice(0, 8)) {
     if (ln === result.personal.name) { foundName = true; continue; }
-    if (foundName && !ln.includes("@") && !ln.match(/\d{3}/) && ln.length <= 70) {
+    if (foundName && !ln.includes("@") && !/\d{7,}/.test(ln) && !ln.startsWith("http") &&
+        ln.length >= 3 && ln.length <= 70 &&
+        !/(linkedin|github|gmail|yahoo|outlook)/i.test(ln)) {
       result.personal.title = ln; break;
     }
   }
 
-  // Section detection
-  const SEC = {
-    summary: /^(professional\s+)?(summary|profile|objective|about\s*me)/i,
-    experience: /^(work\s+)?(experience|employment|work history|career)/i,
-    education: /^education|^academic/i,
-    skills: /^(technical\s+)?skills?|^competencies|^technologies/i,
-    projects: /^projects?|^portfolio/i,
-    certifications: /^certifications?|^certificates?|^credentials/i,
+  // ── 3. Section boundary detection ────────────────────────────────────────
+
+  const SEC_RE = {
+    summary:        /^(professional\s+)?(summary|profile|objective|about(\s+me)?|career\s+(objective|summary))\s*:?$/i,
+    experience:     /^((work|professional|relevant)\s+)?(experience|employment|work\s+history|career\s+history)\s*:?$/i,
+    education:      /^(education|academic(\s+background)?|educational\s+qualifications?|qualifications?)\s*:?$/i,
+    skills:         /^((technical|core|key|professional)\s+)?(skills?|competencies|technologies|tech\s+stack|areas\s+of\s+expertise)\s*:?$/i,
+    projects:       /^((personal|academic|key|notable)\s+)?projects?\s*:?$/i,
+    certifications: /^(certifications?|certificates?|credentials?|licenses?\s*(&|and)?\s*certifications?|courses?\s*(&|and)?\s*certifications?)\s*:?$/i,
+    languages:      /^(languages?(\s+known)?|language\s+proficiency)\s*:?$/i,
   };
 
   let curSec = null;
   const secBufs = {};
   for (const ln of lines) {
     let hit = false;
-    for (const [k, re] of Object.entries(SEC)) {
-      if (re.test(ln) && ln.length < 45) { curSec = k; secBufs[k] = secBufs[k] || []; hit = true; break; }
+    for (const [k, re] of Object.entries(SEC_RE)) {
+      if (re.test(ln) && ln.length < 55) { curSec = k; secBufs[k] = secBufs[k] || []; hit = true; break; }
     }
     if (!hit && curSec) secBufs[curSec].push(ln);
   }
 
-  if (secBufs.summary) result.personal.summary = secBufs.summary.slice(0,6).join(" ");
+  // ── 4. Summary ────────────────────────────────────────────────────────────
 
-  if (secBufs.skills) {
-    const raw = secBufs.skills.join(" , ");
-    result.skills = raw.split(/[,•·|\n]+/).map(s=>s.trim()).filter(s=>s && s.length<40).slice(0,20);
+  if (secBufs.summary?.length) {
+    result.personal.summary = secBufs.summary.slice(0, 8).join(" ").replace(/\s+/g, " ").trim();
   }
 
-  if (secBufs.experience) {
+  // ── 5. Skills ─────────────────────────────────────────────────────────────
+
+  if (secBufs.skills?.length) {
+    const raw = secBufs.skills.join(" | ");
+    result.skills = raw
+      .split(/[,•·|\n\/]+/)
+      .map(s => s.replace(/^[-–*▪◦]\s*/, "").trim())
+      .filter(s => s && s.length >= 2 && s.length <= 40 && !/^\d+$/.test(s))
+      .slice(0, 25);
+  }
+
+  // ── 6. Experience ─────────────────────────────────────────────────────────
+
+  if (secBufs.experience?.length) {
     const expL = secBufs.experience;
-    const dateRe = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})/i;
+    // Matches "Jan 2020 – Dec 2022", "2020 – 2022", "2020 - Present", "Jan 2020 – Present"
+    const dateRangeRe = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)?\s*'?(\d{4})\s*[-–—to]+\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)?\s*'?(\d{4}|present|current|now|till\s+date)/i;
+    const yearOnlyRe = /\b(20\d{2}|19\d{2})\s*[-–—]\s*(20\d{2}|19\d{2}|present|current)/i;
+
     let cur = null;
     for (let i = 0; i < expL.length; i++) {
       const ln = expL[i];
-      if (dateRe.test(ln) && i > 0) {
+      const hasDateRange = dateRangeRe.test(ln) || yearOnlyRe.test(ln);
+
+      if (hasDateRange) {
         if (cur) result.experience.push(cur);
-        const yr = ln.match(/\d{4}/g) || [];
-        cur = { id:Date.now()+i, role:expL[i-1]||"", company:ln, location:"", start:yr[0]||"", end:yr[1]||"Present", bullets:[] };
-      } else if (cur && (ln.startsWith("•")||ln.startsWith("–")||ln.startsWith("-")||ln.startsWith("·"))) {
-        cur.bullets.push(ln.replace(/^[•–\-·]\s*/,""));
+        // Extract start/end
+        const dm = ln.match(/((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec\w*)\s*)?'?(\d{4})\s*[-–—]+\s*((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec\w*)\s*)?'?(\d{0,4}|present|current)/i);
+        const start = dm ? ((dm[1] || "").trim() + " " + dm[2]).trim() : "";
+        const end   = dm ? ((dm[3] || "").trim() + " " + dm[4]).trim() || "Present" : "Present";
+
+        // Try to detect role and company from this line or adjacent lines
+        // Pattern 1: "Role | Company | dates" or "Role at Company | dates"
+        const stripped = ln.replace(dateRangeRe,"").replace(yearOnlyRe,"").trim();
+        const pipeM  = stripped.match(/^(.+?)\s*[|·•,]\s*(.+)/);
+        const atM    = stripped.match(/^(.+?)\s+at\s+(.+)/i);
+        let role = "", company = "";
+        if (pipeM && pipeM[1].length < 60) {
+          role = pipeM[1].trim(); company = pipeM[2].replace(/[|,·•].*/,"").trim();
+        } else if (atM) {
+          role = atM[1].trim(); company = atM[2].trim();
+        } else {
+          // Date is standalone or on company line; use previous non-bullet line as role
+          role = i > 0 ? expL[i - 1].replace(/^[•·\-–*]\s*/, "") : "";
+          company = stripped.replace(/^[•·\-–*,|]\s*/, "").trim();
+          if (company === role) company = "";
+        }
+        cur = { id: Date.now() + i, role, company, location: "", start, end, bullets: [] };
+      } else if (cur) {
+        if (/^[•·\-–*▪◦]\s/.test(ln)) {
+          cur.bullets.push(ln.replace(/^[•·\-–*▪◦]\s*/, "").trim());
+        } else if (!cur.company && ln.length < 70 && !/\d{4}/.test(ln)) {
+          cur.company = ln; // second line = company when role was on previous line
+        } else if (ln.length > 25 && /^[A-Z]/.test(ln)) {
+          cur.bullets.push(ln); // long achievement line without bullet char
+        }
       }
     }
     if (cur) result.experience.push(cur);
   }
 
-  if (secBufs.education) {
+  // ── 7. Education ──────────────────────────────────────────────────────────
+
+  if (secBufs.education?.length) {
     const edL = secBufs.education;
+    const degreeRe = /\b(b\.?\s*tech|b\.?\s*e\.?|b\.?\s*sc|b\.?\s*com|bca|be\b|b\.?c\.?a|m\.?\s*tech|m\.?\s*e\.?|m\.?\s*sc|mca|mba|m\.?b\.?a|ph\.?\s*d|phd|bachelor|master|diploma|higher\s+secondary|10\+2|12th|10th|sslc|hsc|ssc|pgdm|pgd)\b/i;
+    const yearRe = /\b(20\d{2}|19\d{2})\b/g;
+
+    let cur = null;
     for (let i = 0; i < edL.length; i++) {
-      const yr = edL[i].match(/\d{4}/g) || [];
-      if (yr.length) {
-        result.education.push({ id:Date.now()+i, degree:edL[Math.max(0,i-1)]||"", school:edL[i], location:"", start:yr[0]||"", end:yr[1]||"", details:"" });
+      const ln = edL[i];
+      const hasDegree = degreeRe.test(ln);
+      const years = ln.match(yearRe);
+      if (hasDegree || (years && years.length >= 1)) {
+        if (cur) result.education.push(cur);
+        const yr = ln.match(/(20\d{2}|19\d{2})\s*[-–—]\s*(20\d{2}|19\d{2}|present)/i);
+        const degreeText = hasDegree ? ln.replace(/(20\d{2}|19\d{2})[\s\S]*/g,"").trim() : (edL[Math.max(0,i-1)] || ln);
+        const schoolText = hasDegree && i + 1 < edL.length ? edL[i+1] : (hasDegree ? "" : ln.replace(/\d{4}.*/,"").trim());
+        cur = {
+          id: Date.now() + i,
+          degree: degreeText,
+          school: schoolText,
+          location: "",
+          start: yr ? yr[1] : (years ? years[0] : ""),
+          end:   yr ? yr[2] : (years && years.length > 1 ? years[1] : ""),
+          details: ""
+        };
+      } else if (cur && !cur.school && ln.length < 80) {
+        cur.school = ln;
+      } else if (cur && ln.length < 60 && !/\d{4}/.test(ln)) {
+        cur.details = (cur.details ? cur.details + " " : "") + ln;
       }
     }
+    if (cur) result.education.push(cur);
+  }
+
+  // ── 8. Projects ───────────────────────────────────────────────────────────
+
+  if (secBufs.projects?.length) {
+    let curP = null;
+    for (let i = 0; i < secBufs.projects.length; i++) {
+      const ln = secBufs.projects[i];
+      const isBullet = /^[•·\-–*▪◦]\s/.test(ln);
+      if (!isBullet && ln.length <= 80) {
+        if (curP) result.projects.push(curP);
+        const urlM = ln.match(/https?:\/\/[\w.\-\/]+/);
+        curP = { id: Date.now() + i, name: ln.replace(/https?:\/\/[\w.\-\/]+/, "").trim(), description: "", link: urlM ? urlM[0] : "" };
+      } else if (curP) {
+        const clean = isBullet ? ln.replace(/^[•·\-–*▪◦]\s*/, "") : ln;
+        curP.description = (curP.description ? curP.description + " " : "") + clean;
+      }
+    }
+    if (curP) result.projects.push(curP);
+  }
+
+  // ── 9. Certifications ────────────────────────────────────────────────────
+
+  if (secBufs.certifications?.length) {
+    let certLines = secBufs.certifications;
+    let i = 0;
+    while (i < certLines.length) {
+      const ln = certLines[i];
+      if (!ln || /^[•·\-–*▪◦]\s*$/.test(ln)) { i++; continue; }
+      const clean = ln.replace(/^[•·\-–*▪◦]\s*/, "").trim();
+      const dateM = clean.match(/\b(20\d{2}|19\d{2})\b/);
+      // Issuer often on the next line or after a dash/pipe
+      const pipeM = clean.match(/^(.+?)\s*[|\-–]\s*(.+)/);
+      let name = clean, issuer = "", date = dateM ? dateM[0] : "";
+      if (pipeM) {
+        name = pipeM[1].replace(/\b(20\d{2}|19\d{2})\b/,"").trim();
+        issuer = pipeM[2].replace(/\b(20\d{2}|19\d{2})\b/,"").trim();
+      } else {
+        name = clean.replace(/\b(20\d{2}|19\d{2})\b/,"").replace(/[-|]\s*$/,"").trim();
+        if (i + 1 < certLines.length && certLines[i+1].length < 50 && !certLines[i+1].match(/\b20\d{2}\b/)) {
+          issuer = certLines[i+1]; i++;
+        }
+      }
+      if (name) result.certifications.push({ id: Date.now() + i, name, issuer, date });
+      i++;
+    }
+  }
+
+  // ── 10. Languages ─────────────────────────────────────────────────────────
+
+  if (secBufs.languages?.length) {
+    const raw = secBufs.languages.join(" , ");
+    raw.split(/[,•·|\n]+/).map(s => s.trim()).filter(s => s && s.length >= 2 && s.length <= 30).forEach((s, i) => {
+      const lvlM = s.match(/\(([^)]+)\)/);
+      result.languages.push({ id: Date.now() + i, name: s.replace(/\s*\([^)]+\)/, "").trim(), level: lvlM ? lvlM[1] : "" });
+    });
   }
 
   return result;
@@ -143,7 +305,7 @@ export default function ImportResumeModal({ onClose, onImport, user, onUpgrade }
           <Crown style={{ width: 40, height: 40, color: "#b84a2e", margin: "0 auto 1rem" }} />
           <h2 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: "1.5rem", fontWeight: 700, color: "#1a2e4a", margin: "0 0 0.75rem" }}>Pro Feature</h2>
           <p style={{ color: "#666", fontSize: "0.9rem", lineHeight: 1.6, margin: "0 0 1.5rem" }}>Import and auto-fill your resume from an existing PDF or Word document. Upgrade to Pro to access this feature.</p>
-          <button onClick={onUpgrade} style={{ width: "100%", padding: "12px", background: "#b84a2e", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.9rem", marginBottom: "8px" }}>Upgrade to Pro — $9/mo</button>
+          <button onClick={onUpgrade} style={{ width: "100%", padding: "12px", background: "#b84a2e", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.9rem", marginBottom: "8px" }}>Upgrade to Pro — Rs. 99/mo</button>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: "0.8rem" }}>Maybe later</button>
         </div>
       </div>
@@ -282,10 +444,13 @@ export default function ImportResumeModal({ onClose, onImport, user, onUpgrade }
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "8px", fontSize: "0.8rem", color: "#666", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-                {parsed.experience.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.experience.length} experience entries</span>}
-                {parsed.education.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.education.length} education entries</span>}
+              <div style={{ display: "flex", gap: "6px", fontSize: "0.78rem", color: "#666", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+                {parsed.experience.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.experience.length} experience</span>}
+                {parsed.education.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.education.length} education</span>}
                 {parsed.skills.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.skills.length} skills</span>}
+                {parsed.projects?.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.projects.length} projects</span>}
+                {parsed.certifications?.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.certifications.length} certifications</span>}
+                {parsed.languages?.length > 0 && <span style={{ background: "#edf2f7", padding: "3px 10px", color: "#1a2e4a" }}>{parsed.languages.length} languages</span>}
               </div>
 
               <div style={{ display: "flex", gap: "8px" }}>

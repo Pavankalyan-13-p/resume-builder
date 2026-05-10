@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { X } from "lucide-react";
-import { generateInterviewQuestions } from "../data/interviewQuestions.js";
+import React, { useState, useEffect } from "react";
+import { X, RefreshCw } from "lucide-react";
+import { fetchInterviewQuestion } from "../data/interviewQuestions.js";
+
 const IS_CSS = `
   @keyframes is-blink { 0%,100%{opacity:1} 50%{opacity:0} }
   @keyframes is-nailed-pop { 0%{transform:scale(1)} 40%{transform:scale(1.13)} 100%{transform:scale(1)} }
   @keyframes is-score-pop { 0%{opacity:0;transform:scale(0.5)} 70%{transform:scale(1.12)} 100%{opacity:1;transform:scale(1)} }
   @keyframes is-celebrate { 0%{opacity:0;transform:scale(0.55) translateY(16px)} 22%{opacity:1;transform:scale(1.1) translateY(-8px)} 60%{opacity:1;transform:scale(1) translateY(-14px)} 100%{opacity:0;transform:scale(0.88) translateY(-44px)} }
+  @keyframes is-pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
   .is-celebrate-wrap{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
   .is-celebrate-card{background:linear-gradient(135deg,#15803d,#16a34a);border-radius:20px;padding:1.25rem 2.5rem;text-align:center;box-shadow:0 8px 48px rgba(21,128,61,0.65);animation:is-celebrate 0.95s cubic-bezier(.36,.07,.19,.97) forwards;}
   .is-wrap{position:fixed;inset:0;z-index:100;background:#0f172a;overflow-y:auto;display:flex;flex-direction:column;box-sizing:border-box;}
@@ -21,48 +23,110 @@ const IS_CSS = `
   .is-done{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.5rem;text-align:center;min-height:calc(100vh - 56px);}
   .is-score-badge{animation:is-score-pop 0.7s cubic-bezier(.36,.07,.19,.97) forwards;}
   .is-nailed-anim{animation:is-nailed-pop 0.5s cubic-bezier(.36,.07,.19,.97);}
+  .is-skeleton{background:linear-gradient(90deg,#1e293b 25%,#2d3f54 50%,#1e293b 75%);background-size:200% 100%;animation:is-pulse 1.4s ease-in-out infinite;border-radius:6px;}
   @media(max-width:520px){.is-cat-grid{grid-template-columns:1fr;}.is-full{grid-column:span 1;}.is-intro,.is-select,.is-done{padding:1.5rem 1rem;}}
 `;
+
+const MAX_QS = 8;
+
+const CATS = [
+  { id:'hr',           label:'HR & Personal',  emoji:'\u{1F464}', color:'#3b82f6', desc:'Walk-ins, strengths & career goals' },
+  { id:'technical',    label:'Technical',       emoji:'\u{1F4BB}', color:'#b84a2e', desc:'Skills, tools & architecture' },
+  { id:'roleSpecific', label:'Role-Specific',   emoji:'\u{1F3AF}', color:'#0ea5e9', desc:'Deep questions for your exact role' },
+  { id:'projects',     label:'Project-Based',   emoji:'\u{1F680}', color:'#10b981', desc:'Your projects, decisions & impact' },
+  { id:'situational',  label:'Situational',     emoji:'\u{1F9E0}', color:'#8b5cf6', desc:'STAR method & behavioural rounds' },
+];
+
+const SAMPLE_QS = [
+  "Tell me about yourself — walk me through your background and what you're looking for.",
+  "Describe a challenging technical problem you solved and how you approached it.",
+  "Tell me about a project you're proud of and the impact it had.",
+];
+const UPGRADE_FEATURES = [
+  { icon: '🎯', text: '5 rounds: HR, Technical, Role-Specific, Projects & Situational' },
+  { icon: '📋', text: 'AI-generated questions personalized directly from your resume' },
+  { icon: '💡', text: 'Answer strategy + sample professional answers revealed on demand' },
+  { icon: '✅', text: '"Nailed It" scoring to track your confidence as you practice' },
+  { icon: '🔄', text: 'Retry any round until you feel fully interview-ready' },
+];
+
+function buildContext(resume) {
+  const parts = [];
+  if (resume?.experience?.length) {
+    const expStr = resume.experience.slice(0, 2)
+      .map(e => [e.role, e.company].filter(Boolean).join(' at '))
+      .filter(Boolean).join(', ');
+    if (expStr) parts.push(expStr);
+  }
+  if (resume?.projects?.length) {
+    const projStr = resume.projects.slice(0, 2).map(p => p.name).filter(Boolean).join(', ');
+    if (projStr) parts.push(`Projects: ${projStr}`);
+  }
+  if (resume?.education?.length) {
+    const e = resume.education[0];
+    const eduStr = [e.degree, e.school].filter(Boolean).join(' from ');
+    if (eduStr) parts.push(eduStr);
+  }
+  return parts.join('. ');
+}
 
 export default function InterviewSimulator({ resume, user, onClose, onUpgrade }) {
   const [phase, setPhase]           = useState('intro');
   const [category, setCategory]     = useState(null);
   const [qIdx, setQIdx]             = useState(0);
+  const [currentQ, setCurrentQ]     = useState(null);
+  const [isLoading, setIsLoading]   = useState(false);
+  const [loadError, setLoadError]   = useState(null);
   const [revealed, setRevealed]     = useState(false);
   const [typedQ, setTypedQ]         = useState('');
   const [isTyping, setIsTyping]     = useState(false);
   const [nailedAnim, setNailedAnim]     = useState(false);
   const [nailedCount, setNailedCount]   = useState(0);
   const [celebration, setCelebration]   = useState(false);
+  const [showUpgradeGate, setShowUpgradeGate] = useState(false);
 
-  const data = useMemo(() => generateInterviewQuestions(resume), [resume]);
+  const isPro = user?.plan === 'pro';
 
-  const CATS = [
-    { id:'hr',           label:'HR & Personal',  emoji:'\u{1F464}', color:'#3b82f6', desc:'Walk-ins, strengths & career goals' },
-    { id:'technical',    label:'Technical',       emoji:'\u{1F4BB}', color:'#b84a2e', desc:'Skills, tools & architecture' },
-    { id:'roleSpecific', label:'Role-Specific',   emoji:'\u{1F3AF}', color:'#0ea5e9', desc:'Deep questions for your exact role' },
-    { id:'projects',     label:'Project-Based',   emoji:'\u{1F680}', color:'#10b981', desc:'Your projects, decisions & impact' },
-    { id:'situational',  label:'Situational',     emoji:'\u{1F9E0}', color:'#8b5cf6', desc:'STAR method & behavioural rounds' },
-  ];
-
-  const qs       = category ? (data[category] || []) : [];
-  const q        = qs[qIdx] || null;
-  const total    = qs.length;
   const catInfo  = CATS.find(c => c.id === category) || CATS[0];
-  const totalQs  = CATS.reduce((n, c) => n + (data[c.id]?.length || 0), 0);
-  const scorePct = total > 0 ? Math.round((nailedCount / total) * 100) : 0;
-  const progPct  = total > 0 ? (qIdx / total) * 100 : 0;
+  const total    = MAX_QS;
+  const scorePct = Math.round((nailedCount / total) * 100);
+  const progPct  = (qIdx / total) * 100;
   const role     = resume?.personal?.title || '';
   const skills   = resume?.skills || [];
 
-  // Typing animation for each new question
-  useEffect(() => {
-    if (phase !== 'practice' || !q) return;
-    setTypedQ('');
+  // Load a question from the AI backend
+  const loadQuestion = async (catId) => {
+    setIsLoading(true);
+    setLoadError(null);
+    setCurrentQ(null);
     setRevealed(false);
+    try {
+      const q = await fetchInterviewQuestion({
+        category: catId,
+        role: resume?.personal?.title || 'Professional',
+        skills: resume?.skills || [],
+        context: buildContext(resume),
+      });
+      setCurrentQ(q);
+    } catch (err) {
+      if (err.code === 'PREMIUM_REQUIRED') {
+        setPhase('select');
+        setShowUpgradeGate(true);
+      } else {
+        setLoadError(err.message || 'Failed to load question. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Typing animation — triggers when a new question arrives
+  useEffect(() => {
+    if (phase !== 'practice' || !currentQ) return;
+    setTypedQ('');
     setNailedAnim(false);
     setIsTyping(true);
-    const text = q.q;
+    const text = currentQ.question;
     const speed = Math.max(6, Math.min(22, 1600 / text.length));
     let i = 0;
     const id = setInterval(() => {
@@ -71,15 +135,17 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
       if (i >= text.length) { clearInterval(id); setIsTyping(false); }
     }, speed);
     return () => clearInterval(id);
-  }, [qIdx, category, phase]);
+  }, [currentQ, phase]);
 
   const next = () => {
-    if (qIdx + 1 >= total) { setPhase('done'); }
-    else { setQIdx(n => n + 1); setRevealed(false); }
+    if (qIdx + 1 >= MAX_QS) {
+      setPhase('done');
+    } else {
+      const nextIdx = qIdx + 1;
+      setQIdx(nextIdx);
+      loadQuestion(category);
+    }
   };
-
-  // Fallback sample answer when a question has no hand-crafted answer
-  const hintToAnswer = (hint = '') => `In my experience: ${hint.replace(/\.$/, '')}. I have applied this consistently in real-world projects and found it produces reliable, well-reasoned results. Understanding these trade-offs deeply helps me make better architectural decisions and communicate clearly with both technical and non-technical stakeholders.`;
 
   const nail = () => {
     setNailedAnim(true);
@@ -94,10 +160,13 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
     setRevealed(false);
     setNailedAnim(false);
     setNailedCount(0);
+    setCurrentQ(null);
+    setLoadError(null);
     setPhase('practice');
+    loadQuestion(id);
   };
 
-  const goSelect = () => setPhase('select');
+  const goSelect = () => { setPhase('select'); setCurrentQ(null); setLoadError(null); };
 
   const trophy  = scorePct >= 80 ? '\u{1F3C6}' : scorePct >= 60 ? '⭐' : '\u{1F4AA}';
   const doneMsg = scorePct >= 80
@@ -153,8 +222,8 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               Ready to Ace<br /><span style={{ color:'#f97316', fontStyle:'italic' }}>Your Interview?</span>
             </h1>
             <p style={{ color:'#94a3b8', fontSize:'0.95rem', lineHeight:1.7, maxWidth:400, margin:'0 auto 2rem' }}>
-              Practice with <strong style={{ color:'#e2e8f0' }}>{totalQs} questions</strong> pulled directly from your resume.<br />
-              Build real confidence - one answer at a time.
+              Practice with <strong style={{ color:'#e2e8f0' }}>AI-generated questions</strong> pulled directly from your resume.<br />
+              Build real confidence — one answer at a time.
             </p>
 
             {/* Resume profile card */}
@@ -165,7 +234,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:4 }}>
                 {CATS.map(c => (
                   <span key={c.id} style={{ fontSize:'0.62rem', background:'#0f172a', border:'1px solid #1e293b', color:c.color, padding:'2px 8px', borderRadius:99, fontWeight:600 }}>
-                    {c.emoji} {data[c.id]?.length || 0}
+                    {c.emoji} {c.label.split(' ')[0]}
                   </span>
                 ))}
               </div>
@@ -178,7 +247,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(184,74,46,0.4)'; }}>
               Start Practice Session &rarr;
             </button>
-            <p style={{ color:'#334155', fontSize:'0.73rem', marginTop:'0.75rem' }}>All rounds free &middot; No time limit &middot; Resume-personalised</p>
+            <p style={{ color:'#334155', fontSize:'0.73rem', marginTop:'0.75rem' }}>Resume-personalised &middot; {MAX_QS} questions per round &middot; No time limit</p>
           </div>
         )}
 
@@ -198,16 +267,16 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                   key={cat.id}
                   className={`is-cat-card${i === 4 ? ' is-full' : ''}`}
                   style={{ borderLeftColor:cat.color }}
-                  onClick={() => startCat(cat.id)}>
+                  onClick={() => isPro ? startCat(cat.id) : setShowUpgradeGate(true)}>
                   <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
                     <span style={{ fontSize:'1.5rem', lineHeight:1 }}>{cat.emoji}</span>
                     <span style={{ fontSize:'0.62rem', background:cat.color+'22', color:cat.color, padding:'2px 8px', borderRadius:99, fontWeight:700 }}>
-                      {data[cat.id]?.length || 0} Qs
+                      {isPro ? `${MAX_QS} Qs` : '🔒 Pro'}
                     </span>
                   </div>
                   <div style={{ color:'#f1f5f9', fontWeight:700, fontSize:'0.9rem', marginBottom:3 }}>{cat.label}</div>
                   <div style={{ color:'#64748b', fontSize:'0.75rem', lineHeight:1.5, marginBottom:8 }}>{cat.desc}</div>
-                  <div style={{ color:cat.color, fontSize:'0.7rem', fontWeight:600 }}>Start Round &rarr;</div>
+                  <div style={{ color:isPro ? cat.color : '#475569', fontSize:'0.7rem', fontWeight:600 }}>{isPro ? 'Start Round →' : 'Upgrade to unlock →'}</div>
                 </div>
               ))}
             </div>
@@ -215,7 +284,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
         )}
 
         {/* PRACTICE SCREEN */}
-        {phase === 'practice' && q && (
+        {phase === 'practice' && (
           <div style={{ flex:1, overflowY:'auto', padding:'1.25rem 1.5rem', maxWidth:660, width:'100%', margin:'0 auto', boxSizing:'border-box' }}>
 
             {/* Interviewer chip */}
@@ -226,47 +295,65 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               <div>
                 <div style={{ color:'#f1f5f9', fontWeight:600, fontSize:'0.875rem' }}>Interviewer</div>
                 <div style={{ color:'#475569', fontSize:'0.7rem' }}>
-                  {isTyping ? 'Typing...' : 'Asked a question'}
+                  {isLoading ? 'Generating question…' : isTyping ? 'Typing…' : loadError ? 'Error' : 'Asked a question'}
                 </div>
               </div>
             </div>
 
-            {/* Question bubble with typing animation */}
+            {/* Question bubble */}
             <div style={{ background:'#1e293b', border:'1px solid #334155', borderRadius:'4px 16px 16px 16px', padding:'1.25rem 1.5rem', marginBottom:'1.25rem', minHeight:80 }}>
-              <p style={{ color:'#f1f5f9', fontSize:'1rem', lineHeight:1.7, margin:0, fontWeight:500 }}>
-                {typedQ}
-                {isTyping && (
-                  <span style={{ display:'inline-block', width:2, height:'1em', background:'#b84a2e', marginLeft:3, verticalAlign:'middle', animation:'is-blink 0.7s step-end infinite' }} />
-                )}
-              </p>
+              {isLoading ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <div className="is-skeleton" style={{ height:14, width:'90%' }} />
+                  <div className="is-skeleton" style={{ height:14, width:'75%' }} />
+                  <div className="is-skeleton" style={{ height:14, width:'55%' }} />
+                </div>
+              ) : loadError ? (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, padding:'0.5rem 0' }}>
+                  <p style={{ color:'#f87171', fontSize:'0.85rem', margin:0, textAlign:'center' }}>{loadError}</p>
+                  <button
+                    onClick={() => loadQuestion(category)}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 16px', background:'#b84a2e', border:'none', color:'#fff', fontWeight:600, fontSize:'0.78rem', cursor:'pointer', borderRadius:6, fontFamily:'inherit' }}>
+                    <RefreshCw style={{ width:12, height:12 }} /> Try Again
+                  </button>
+                </div>
+              ) : (
+                <p style={{ color:'#f1f5f9', fontSize:'1rem', lineHeight:1.7, margin:0, fontWeight:500 }}>
+                  {typedQ}
+                  {isTyping && (
+                    <span style={{ display:'inline-block', width:2, height:'1em', background:'#b84a2e', marginLeft:3, verticalAlign:'middle', animation:'is-blink 0.7s step-end infinite' }} />
+                  )}
+                </p>
+              )}
             </div>
 
-            {/* Answer area - only visible once typing finishes */}
-            {!isTyping && (
+            {/* Answer area — only when question is loaded and typing finished */}
+            {!isLoading && !loadError && currentQ && !isTyping && (
               <div>
-                {/* Dual-section card - blurred until revealed */}
                 <div style={{ position:'relative' }}>
                   <div style={{ transition:'filter 0.4s ease,opacity 0.4s ease', filter:revealed?'none':'blur(7px)', opacity:revealed?1:0.4, pointerEvents:revealed?'auto':'none', userSelect:revealed?'auto':'none' }}>
 
-                    {/* A - Answer Strategy */}
+                    {/* Answer Strategy */}
                     <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:8, padding:'1rem 1.25rem', marginBottom:8 }}>
                       <div style={{ fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.13em', fontWeight:700, color:'#b45309', marginBottom:5 }}>Answer Strategy</div>
-                      <p style={{ color:'#1e293b', fontSize:'0.84rem', lineHeight:1.65, margin:0 }}>{q.hint}</p>
+                      <p style={{ color:'#1e293b', fontSize:'0.84rem', lineHeight:1.65, margin:0 }}>{currentQ.hint}</p>
                     </div>
 
-                    {/* B - Sample Professional Answer */}
-                    <div style={{ background:'#fff', border:'1px solid #d1fae5', borderLeft:'3px solid #15803d', borderRadius:'0 8px 8px 0', padding:'1rem 1.25rem' }}>
-                      <div style={{ fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.13em', fontWeight:700, color:'#15803d', marginBottom:5 }}>Sample Professional Answer</div>
-                      <p style={{ color:'#1e293b', fontSize:'0.875rem', lineHeight:1.72, margin:0, fontStyle:'italic' }}>
-                        &ldquo;{q.answer || hintToAnswer(q.hint)}&rdquo;
-                      </p>
-                    </div>
+                    {/* Sample Answer */}
+                    {currentQ.answer && (
+                      <div style={{ background:'#fff', border:'1px solid #d1fae5', borderLeft:'3px solid #15803d', borderRadius:'0 8px 8px 0', padding:'1rem 1.25rem' }}>
+                        <div style={{ fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.13em', fontWeight:700, color:'#15803d', marginBottom:5 }}>Sample Professional Answer</div>
+                        <p style={{ color:'#1e293b', fontSize:'0.875rem', lineHeight:1.72, margin:0, fontStyle:'italic' }}>
+                          &ldquo;{currentQ.answer}&rdquo;
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {!revealed && (
                     <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
                       <div style={{ background:'rgba(15,23,42,0.78)', padding:'6px 16px', borderRadius:99, fontSize:'0.75rem', color:'#94a3b8', display:'flex', alignItems:'center', gap:6 }}>
-                        Answer hidden - click to reveal
+                        Answer hidden — click to reveal
                       </div>
                     </div>
                   )}
@@ -288,12 +375,12 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                         className={nailedAnim ? 'is-nailed-anim' : ''}
                         onClick={nail}
                         style={{ width:'100%', padding:'0.9rem', background:'linear-gradient(135deg,#15803d,#16a34a)', border:'none', color:'#fff', cursor:'pointer', fontWeight:700, fontSize:'0.9rem', borderRadius:8, fontFamily:'inherit', boxShadow:'0 4px 14px rgba(21,128,61,0.3)', transition:'transform 0.15s' }}>
-                        Nailed It - Next Question
+                        Nailed It — Next Question
                       </button>
                       <button
                         onClick={next}
                         style={{ background:'none', border:'none', cursor:'pointer', color:'#64748b', fontSize:'0.78rem', padding:'4px', textDecoration:'underline', fontFamily:'inherit' }}>
-                        Not sure - skip to next
+                        Not sure — skip to next
                       </button>
                     </>
                   )}
@@ -314,6 +401,50 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
           </div>
         )}
 
+        {/* UPGRADE GATE OVERLAY */}
+        {showUpgradeGate && (
+          <div style={{ position:'fixed', inset:0, zIndex:150, background:'rgba(0,0,0,0.78)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1.5rem', boxSizing:'border-box' }}
+            onClick={() => setShowUpgradeGate(false)}>
+            <div style={{ background:'#0f172a', border:'1px solid #334155', borderRadius:16, maxWidth:420, width:'100%', overflow:'hidden' }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ background:'linear-gradient(135deg,rgba(184,74,46,0.18),rgba(249,115,22,0.12))', borderBottom:'1px solid #1e293b', padding:'1.5rem 1.5rem 1.25rem', textAlign:'center' }}>
+                <div style={{ fontSize:'2rem', lineHeight:1, marginBottom:8 }}>👑</div>
+                <h3 style={{ color:'#f1f5f9', margin:'0 0 6px', fontSize:'1.15rem', fontWeight:700, fontFamily:"'Source Serif Pro',Georgia,serif" }}>Pro Feature</h3>
+                <p style={{ color:'#94a3b8', margin:0, fontSize:'0.82rem', lineHeight:1.5 }}>Upgrade to practice with AI-generated interview questions from your resume.</p>
+              </div>
+              <div style={{ padding:'1.25rem 1.5rem 0.75rem' }}>
+                <div style={{ fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.13em', color:'#b84a2e', fontWeight:700, marginBottom:10 }}>Sample Questions You'd Get</div>
+                {SAMPLE_QS.map((sq, i) => (
+                  <div key={i} style={{ background:'#1e293b', border:'1px solid #334155', borderRadius:8, padding:'0.65rem 1rem', marginBottom:7, display:'flex', gap:10, alignItems:'flex-start' }}>
+                    <span style={{ color:'#475569', fontSize:'0.68rem', fontWeight:700, flexShrink:0, marginTop:1 }}>Q{i + 1}</span>
+                    <span style={{ color:'#cbd5e1', fontSize:'0.8rem', lineHeight:1.55 }}>{sq}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding:'0.5rem 1.5rem 1rem' }}>
+                {UPGRADE_FEATURES.map((f, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:7 }}>
+                    <span style={{ fontSize:'0.9rem', flexShrink:0, lineHeight:1.4 }}>{f.icon}</span>
+                    <span style={{ color:'#94a3b8', fontSize:'0.8rem', lineHeight:1.4 }}>{f.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding:'0 1.5rem 1.5rem', display:'flex', flexDirection:'column', gap:8 }}>
+                <button
+                  onClick={() => { setShowUpgradeGate(false); onUpgrade("monthly"); }}
+                  style={{ width:'100%', padding:'0.875rem', background:'linear-gradient(135deg,#b84a2e,#f97316)', border:'none', color:'#fff', fontWeight:700, fontSize:'0.9rem', cursor:'pointer', borderRadius:8, fontFamily:'inherit', boxShadow:'0 4px 16px rgba(184,74,46,0.35)' }}>
+                  Upgrade to Pro — Unlock Simulator
+                </button>
+                <button
+                  onClick={() => setShowUpgradeGate(false)}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'#475569', fontSize:'0.78rem', padding:'4px', fontFamily:'inherit', textDecoration:'underline' }}>
+                  Maybe later
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* DONE SCREEN */}
         {phase === 'done' && (
           <div className="is-done">
@@ -323,7 +454,6 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
             </h2>
             <p style={{ color:'#94a3b8', fontSize:'0.9rem', margin:'0 0 2rem', maxWidth:360 }}>{doneMsg}</p>
 
-            {/* Score card */}
             <div style={{ background:'#1e293b', border:'1px solid #334155', borderRadius:12, padding:'1.5rem 2rem', marginBottom:'1.75rem', width:'100%', maxWidth:340, textAlign:'center' }}>
               <div style={{ display:'flex', justifyContent:'space-around', marginBottom:'1rem' }}>
                 <div>
@@ -346,7 +476,6 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               </div>
             </div>
 
-            {/* Action buttons */}
             <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', maxWidth:340 }}>
               <button onClick={() => startCat(category)} style={{ padding:'0.875rem', background:'linear-gradient(135deg,#b84a2e,#f97316)', border:'none', color:'#fff', fontWeight:700, fontSize:'0.9rem', cursor:'pointer', borderRadius:8, fontFamily:'inherit' }}>
                 Retry This Round

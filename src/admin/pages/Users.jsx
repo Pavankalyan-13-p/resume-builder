@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Search, RefreshCw, Crown, Trash2, UserX } from 'lucide-react';
+import { useAdminToast } from '../useAdminToast.jsx';
 
 const PROVIDER_LABEL = { 'google.com': 'Google', 'password': 'Email' };
 
@@ -12,6 +13,7 @@ function fmt(ts) {
 }
 
 export default function UsersPage() {
+  const { showToast, toastEl } = useAdminToast();
   const [users, setUsers]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
@@ -42,7 +44,7 @@ export default function UsersPage() {
         ...(next ? { upgradedAt: serverTimestamp() } : { downgradedAt: serverTimestamp() }),
       });
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, isPremium: next } : x));
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e) { showToast(e.message || 'Failed to update plan', 'error'); }
     setBusy('');
   };
 
@@ -51,7 +53,7 @@ export default function UsersPage() {
     try {
       await deleteDoc(doc(db, 'users', uid));
       setUsers(prev => prev.filter(u => u.id !== uid));
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e) { showToast(e.message || 'Failed to delete user', 'error'); }
     setBusy(''); setConfirm(null);
   };
 
@@ -64,6 +66,7 @@ export default function UsersPage() {
 
   return (
     <div className="a-page">
+      {toastEl}
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.25rem', flexWrap:'wrap', gap:8 }}>
         <div>

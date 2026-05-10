@@ -1,9 +1,10 @@
 ﻿import React, { useState } from "react";
-import { X, Plus, Crown, Eye, Trash2 } from "lucide-react";
+import { X, Plus, Crown, Eye, Trash2, Sparkles } from "lucide-react";
 import { TEMPLATES } from "../data/resumeData.js";
-export default function Editor({ resume, setResume, section, templateId, onSelectTemplate, user }) {
-  const up = (patch) => setResume(r => ({ ...r, ...patch }));
-  const upP = (patch) => setResume(r => ({ ...r, personal: { ...r.personal, ...patch } }));
+import { fetchAISummary } from "../data/interviewQuestions.js";
+export default function Editor({ resume, setResume, section, templateId, onSelectTemplate, user, onUpgrade }) {
+  const up = (patch) => setResume(r => { const { _isSample: _, ...base } = r; return { ...base, ...patch }; });
+  const upP = (patch) => setResume(r => { const { _isSample: _, ...base } = r; return { ...base, personal: { ...base.personal, ...patch } }; });
 
   if (section === "personal") return (
     <div className="space-y-4">
@@ -22,11 +23,7 @@ export default function Editor({ resume, setResume, section, templateId, onSelec
   );
 
   if (section === "summary") return (
-    <div className="space-y-4">
-      <SectionHeader title="Professional summary" hint="40-80 words describing who you are and what you bring." />
-      <textarea value={resume.personal.summary} onChange={e=>upP({summary:e.target.value})} rows={8} className="w-full p-3 border bg-[#faf7f2] text-sm leading-relaxed" style={{ borderColor: "#1a2e4a20" }} />
-      <div className="text-xs" style={{ color: "#888" }}>{(resume.personal.summary||"").trim().split(/\s+/).filter(Boolean).length} words</div>
-    </div>
+    <SummarySection resume={resume} upP={upP} user={user} onUpgrade={onUpgrade} />
   );
 
   if (section === "experience") return (
@@ -219,6 +216,85 @@ function TemplatePickerCard({ t, active, locked, onSelect }) {
         </div>
       )}
     </button>
+  );
+}
+
+function SummarySection({ resume, upP, user, onUpgrade }) {
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError]     = useState(null);
+
+  const isPremium = user?.plan === 'pro' || user?.role === 'admin';
+
+  const handleAI = async () => {
+    if (!isPremium) { onUpgrade?.('monthly'); return; }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const { summary } = await fetchAISummary({
+        role:       resume.personal?.title       || '',
+        skills:     resume.skills                || [],
+        experience: resume.experience            || [],
+        education:  resume.education             || [],
+      });
+      upP({ summary });
+    } catch (err) {
+      if (err.code === 'PREMIUM_REQUIRED') { onUpgrade?.('monthly'); return; }
+      setAiError(err.message || 'AI generation failed. Try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const wordCount = (resume.personal.summary || '').trim().split(/\s+/).filter(Boolean).length;
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Professional summary" hint="40-80 words describing who you are and what you bring." />
+      <textarea
+        value={resume.personal.summary}
+        onChange={e => upP({ summary: e.target.value })}
+        rows={8}
+        className="w-full p-3 border bg-[#faf7f2] text-sm leading-relaxed"
+        style={{ borderColor: "#1a2e4a20" }}
+      />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span className="text-xs" style={{ color: "#888" }}>{wordCount} words</span>
+        {isPremium ? (
+          <button
+            onClick={handleAI}
+            disabled={aiLoading}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "6px 12px", fontSize: "0.75rem", fontWeight: 600,
+              background: aiLoading ? "#e5e7eb" : "#1a2e4a",
+              color: aiLoading ? "#9ca3af" : "#fff",
+              border: "none", cursor: aiLoading ? "not-allowed" : "pointer",
+              borderRadius: 4, fontFamily: "inherit", transition: "background 0.15s",
+              whiteSpace: "nowrap",
+            }}>
+            <Sparkles style={{ width: 12, height: 12 }} />
+            {aiLoading ? "Writing…" : "Write with AI"}
+          </button>
+        ) : (
+          <button
+            onClick={() => onUpgrade?.('monthly')}
+            title="Upgrade to Pro to unlock AI summary generation"
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "6px 12px", fontSize: "0.75rem", fontWeight: 600,
+              background: "#f8f4ff", color: "#6d28d9",
+              border: "1.5px solid #ddd6fe", cursor: "pointer",
+              borderRadius: 4, fontFamily: "inherit", whiteSpace: "nowrap",
+            }}>
+            <Crown style={{ width: 12, height: 12 }} />
+            Pro Feature — Upgrade
+          </button>
+        )}
+      </div>
+      {aiError && (
+        <p style={{ fontSize: "0.75rem", color: "#dc2626", margin: 0 }}>{aiError}</p>
+      )}
+    </div>
   );
 }
 

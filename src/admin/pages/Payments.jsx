@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { RefreshCw, Plus, CreditCard, Search } from 'lucide-react';
+import { useAdminToast } from '../useAdminToast.jsx';
 
 function fmt(ts) {
   if (!ts) return '—';
@@ -12,6 +13,7 @@ function fmt(ts) {
 const STATUS_CLASS = { completed:'bdg-ok', pending:'bdg-warn', failed:'bdg-err', refunded:'bdg-info' };
 
 export default function PaymentsPage() {
+  const { showToast, toastEl } = useAdminToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -19,7 +21,7 @@ export default function PaymentsPage() {
   const [error, setError]       = useState('');
   const [showAdd, setShowAdd]   = useState(false);
   const [addBusy, setAddBusy]   = useState(false);
-  const [form, setForm]         = useState({ email:'', amount:'', currency:'USD', status:'completed', transactionId:'', note:'' });
+  const [form, setForm]         = useState({ email:'', amount:'', currency:'INR', status:'completed', transactionId:'', note:'' });
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -48,8 +50,8 @@ export default function PaymentsPage() {
       });
       setPayments(prev => [{ id: ref.id, ...form, amount: parseFloat(form.amount)||0, createdAt: { seconds: Date.now()/1000 } }, ...prev]);
       setShowAdd(false);
-      setForm({ email:'', amount:'', currency:'USD', status:'completed', transactionId:'', note:'' });
-    } catch (e) { alert('Error: ' + e.message); }
+      setForm({ email:'', amount:'', currency:'INR', status:'completed', transactionId:'', note:'' });
+    } catch (e) { showToast(e.message || 'Failed to add payment', 'error'); }
     setAddBusy(false);
   };
 
@@ -57,7 +59,7 @@ export default function PaymentsPage() {
     try {
       await updateDoc(doc(db, 'payments', id), { status });
       setPayments(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e) { showToast(e.message || 'Failed to update status', 'error'); }
   };
 
   const filtered = payments.filter(p => {
@@ -73,11 +75,12 @@ export default function PaymentsPage() {
 
   return (
     <div className="a-page">
+      {toastEl}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.25rem', flexWrap:'wrap', gap:8 }}>
         <div>
           <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:700, color:'#0f172a' }}>Payments</h2>
           <p style={{ margin:'2px 0 0', fontSize:'0.78rem', color:'#94a3b8' }}>
-            {payments.length} transactions · ${totalRevenue.toFixed(2)} total revenue
+            {payments.length} transactions · ₹{totalRevenue.toFixed(2)} total revenue
           </p>
         </div>
         <div style={{ display:'flex', gap:8 }}>
@@ -93,7 +96,7 @@ export default function PaymentsPage() {
       {/* Revenue cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'0.75rem', marginBottom:'1.25rem' }}>
         {[
-          { label:'Total Revenue',  value:`$${totalRevenue.toFixed(2)}`, color:'#10b981' },
+          { label:'Total Revenue',  value:`₹${totalRevenue.toFixed(2)}`, color:'#10b981' },
           { label:'Completed',      value: payments.filter(p=>p.status==='completed').length, color:'#16a34a' },
           { label:'Pending',        value: payments.filter(p=>p.status==='pending').length, color:'#d97706' },
           { label:'Failed/Refunded',value: payments.filter(p=>['failed','refunded'].includes(p.status)).length, color:'#dc2626' },
@@ -153,7 +156,7 @@ export default function PaymentsPage() {
                   <td style={{ fontSize:'0.82rem' }}>
                     <div style={{ fontWeight:600, color:'#1e293b' }}>{p.email || '—'}</div>
                   </td>
-                  <td style={{ fontWeight:700, color:'#1e293b' }}>${parseFloat(p.amount||0).toFixed(2)} <span style={{ fontWeight:400, fontSize:'0.72rem', color:'#94a3b8' }}>{p.currency||'USD'}</span></td>
+                  <td style={{ fontWeight:700, color:'#1e293b' }}>{p.currency==='USD' ? '$' : '₹'}{parseFloat(p.amount||0).toFixed(2)} <span style={{ fontWeight:400, fontSize:'0.72rem', color:'#94a3b8' }}>{p.currency||'INR'}</span></td>
                   <td>
                     <span className={`bdg ${STATUS_CLASS[p.status] || 'bdg-free'}`}>{p.status || 'unknown'}</span>
                   </td>
@@ -201,7 +204,7 @@ export default function PaymentsPage() {
                     <label style={{ fontSize:'0.75rem', fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Currency</label>
                     <select className="a-select" style={{ width:'100%' }} value={form.currency}
                       onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                      <option>USD</option><option>EUR</option><option>GBP</option><option>INR</option>
+                      <option>INR</option><option>USD</option><option>EUR</option><option>GBP</option>
                     </select>
                   </div>
                 </div>

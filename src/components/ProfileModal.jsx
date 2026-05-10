@@ -1,7 +1,7 @@
 ﻿import React, { useState } from "react";
-import { X, Crown, LogOut } from "lucide-react";
+import { X, Crown, LogOut, MessageCircle } from "lucide-react";
 
-export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDeleteAccount }) {
+export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDeleteAccount, onContactSupport }) {
   const [name, setName] = useState(user?.name || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -45,6 +45,15 @@ export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDele
                 ) : (
                   <span style={{ display: "inline-block", background: "#edf2f7", color: "#1a2e4a", padding: "2px 10px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Free Plan</span>
                 )}
+                {user?.plan === "pro" && user?.premiumExpiresAt && (() => {
+                  const exp = user.premiumExpiresAt;
+                  const d   = exp.toDate ? exp.toDate() : new Date((exp.seconds || 0) * 1000);
+                  return (
+                    <span style={{ marginLeft: 6, fontSize: "0.7rem", color: "#888" }}>
+                      · Renews {d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  );
+                })()}
                 {user?.provider === "google" && (
                   <span style={{ marginLeft: "6px", display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.7rem", color: "#888" }}>
                     <svg width="12" height="12" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/></svg>
@@ -85,6 +94,12 @@ export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDele
 
           {/* Actions */}
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <button
+              onClick={onContactSupport}
+              style={{ padding: "10px 16px", background: "#f5f5f5", color: "#1a2e4a", border: "1px solid #e0e0e0", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <MessageCircle style={{ width: 15, height: 15 }} /> Contact Support
+            </button>
             <button
               onClick={onLogout}
               style={{ padding: "10px 16px", background: "#f5f5f5", color: "#333", border: "1px solid #e0e0e0", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}

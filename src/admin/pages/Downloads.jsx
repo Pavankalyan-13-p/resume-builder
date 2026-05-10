@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { RefreshCw, Search, RotateCcw, Download } from 'lucide-react';
+import { useAdminToast } from '../useAdminToast.jsx';
 
 function fmt(ts) {
   if (!ts) return '—';
@@ -10,6 +11,7 @@ function fmt(ts) {
 }
 
 export default function DownloadsPage() {
+  const { showToast, toastEl } = useAdminToast();
   const [users, setUsers]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
@@ -36,7 +38,7 @@ export default function DownloadsPage() {
     try {
       await updateDoc(doc(db, 'users', u.id), { downloadCount: 0 });
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, downloadCount: 0 } : x));
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e) { showToast(e.message || 'Failed to reset downloads', 'error'); }
     setBusy('');
   };
 
@@ -57,6 +59,7 @@ export default function DownloadsPage() {
 
   return (
     <div className="a-page">
+      {toastEl}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.25rem', flexWrap:'wrap', gap:8 }}>
         <div>
           <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:700, color:'#0f172a' }}>Download Tracking</h2>

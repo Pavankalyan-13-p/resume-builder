@@ -4,6 +4,8 @@ export const TEMPLATES = [
   { id: "classic",       name: "Basic Professional", desc: "Traditional serif, single column",     premium: false, accent: "#1a2e4a" },
   { id: "modern",        name: "Modern Clean",        desc: "Two-column with accent header",        premium: false, accent: "#b84a2e" },
   { id: "minimal",       name: "Simple ATS",          desc: "Maximum whitespace, top ATS score",    premium: false, accent: "#2a2a2a" },
+  { id: "sleek",         name: "Sleek",               desc: "Split header, teal accent, clean",     premium: false, accent: "#0f766e" },
+  { id: "canvas",        name: "Canvas",              desc: "Light sidebar, warm two-column",       premium: false, accent: "#44403c" },
   // ── Premium ─────────────────────────────────────────────────────────────
   { id: "executive",     name: "Executive",           desc: "Bold navy leadership style",           premium: true,  accent: "#0d2540" },
   { id: "creative",      name: "Creative Designer",   desc: "Editorial sidebar layout",             premium: true,  accent: "#7c2d12" },
@@ -13,6 +15,8 @@ export const TEMPLATES = [
   { id: "fresher",       name: "Fresher / Student",   desc: "Education-first for new grads",        premium: true,  accent: "#1d4ed8" },
   { id: "international", name: "International",       desc: "EU / global standard format",          premium: true,  accent: "#374151" },
   { id: "twocolumn",     name: "Two Column",          desc: "Balanced dual-column layout",          premium: true,  accent: "#1a1a2e" },
+  { id: "apex",          name: "Apex",                desc: "Refined serif, gradient accents",       premium: true,  accent: "#2563eb" },
+  { id: "meridian",      name: "Meridian",            desc: "Light sidebar, sky-blue two-column",    premium: true,  accent: "#0369a1" },
 ];
 
 // ========== JOB ROLE DEFINITIONS ==========

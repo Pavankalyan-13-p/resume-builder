@@ -12,13 +12,44 @@ import {
   reauthenticateWithCredential,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, getDocFromServer, updateDoc, deleteDoc, serverTimestamp
+  doc, setDoc, getDoc, getDocFromServer, updateDoc, deleteDoc, serverTimestamp,
+  collection, addDoc, getDocs, query, orderBy, Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { googleProvider } from '../firebase/providers';
 import { createOrFetchUserDoc } from '../firebase/userUtils';
 
 const AuthContext = createContext(null);
+
+// ─── Premium expiry helpers ───────────────────────────────────────────────────
+
+// Returns true only when the user is premium AND their subscription has not lapsed.
+// Legacy docs that have isPremium=true but no premiumExpiresAt field keep their
+// access (migration grace) — they will get an expiry on their next payment.
+export function isActivePremium(userDoc) {
+  if (!userDoc?.isPremium) return false;
+  const exp = userDoc.premiumExpiresAt;
+  if (!exp) return true; // no expiry stored → legacy user, keep active
+  const expDate = exp.toDate ? exp.toDate() : new Date((exp.seconds || 0) * 1000);
+  return expDate > new Date();
+}
+
+// Called once on login. If the stored doc shows premium but the expiry has
+// passed, writes the downgrade to Firestore and returns the corrected data.
+async function autoDowngradeIfExpired(data, uid) {
+  if (!data?.isPremium || !data?.premiumExpiresAt) return data;
+  const exp = data.premiumExpiresAt;
+  const expDate = exp.toDate ? exp.toDate() : new Date((exp.seconds || 0) * 1000);
+  if (expDate > new Date()) return data; // still valid
+  try {
+    await updateDoc(doc(db, 'users', uid), {
+      isPremium: false,
+      plan:      'free',
+      downgradedAt: serverTimestamp(),
+    });
+  } catch (_) {} // fire-and-forget; local state is revoked regardless
+  return { ...data, isPremium: false, plan: 'free' };
+}
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
@@ -63,20 +94,34 @@ export function AuthProvider({ children }) {
     updateDoc(ref, { ...patch, updatedAt: serverTimestamp() }).catch(() => {});
   }, [currentUser]);
 
-  const upgradeToPremium = useCallback(async () => {
+  const upgradeToPremium = useCallback(async (paymentId = null, plan = 'monthly') => {
     if (!currentUser) return;
-    // In production: verify Stripe payment via webhook before this call
     const ref = doc(db, 'users', currentUser.uid);
-    await updateDoc(ref, { isPremium: true, upgradedAt: serverTimestamp() });
-    setUserDoc(prev => ({ ...prev, isPremium: true }));
+    const daysToAdd       = plan === 'yearly' ? 365 : 30;
+    const expiresDate     = new Date();
+    expiresDate.setDate(expiresDate.getDate() + daysToAdd);
+    const premiumExpiresAt = Timestamp.fromDate(expiresDate);
+    await updateDoc(ref, {
+      isPremium:         true,
+      plan,
+      upgradedAt:        serverTimestamp(),
+      premiumExpiresAt,
+      ...(paymentId && { lastPaymentId: paymentId }),
+    });
+    setUserDoc(prev => ({ ...prev, isPremium: true, plan, premiumExpiresAt }));
   }, [currentUser]);
 
   const deleteAccount = useCallback(async () => {
     if (!currentUser) return;
-    // Delete Firestore document
-    await deleteDoc(doc(db, 'users', currentUser.uid));
-    // Delete Firebase Auth user
+    // Auth user deleted first — if this fails, Firestore data is still intact
+    // and the user can retry. Reversing the order risks orphaned auth accounts
+    // with no Firestore doc, which can't be cleaned up without admin SDK access.
     await deleteUser(currentUser);
+    // Firestore cleanup after auth is gone — failure here leaves an orphaned doc
+    // but the account itself is deleted and the user is logged out.
+    try {
+      await deleteDoc(doc(db, 'users', currentUser.uid));
+    } catch (_) {}
     setCurrentUser(null);
     setUserDoc(null);
   }, [currentUser]);
@@ -106,9 +151,39 @@ export function AuthProvider({ children }) {
     return { resumeData: null, templateId: null };
   }, []);
 
+  // ── Multi-resume subcollection ─────────────────────────────────────────
+  const loadUserResumes = useCallback(async () => {
+    if (!currentUser) return [];
+    try {
+      const q = query(collection(db, 'users', currentUser.uid, 'resumes'), orderBy('updatedAt', 'desc'));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch { return []; }
+  }, [currentUser]);
+
+  const saveResumeToSubcollection = useCallback(async (resumeId, resumeData, templateId, title) => {
+    if (!currentUser) return null;
+    try {
+      const name = title || resumeData?.personal?.name || 'My Resume';
+      if (resumeId) {
+        await setDoc(doc(db, 'users', currentUser.uid, 'resumes', resumeId),
+          { resumeData, templateId, title: name, updatedAt: serverTimestamp() }, { merge: true });
+        return resumeId;
+      }
+      const ref = await addDoc(collection(db, 'users', currentUser.uid, 'resumes'),
+        { title: name, resumeData, templateId, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      return ref.id;
+    } catch { return null; }
+  }, [currentUser]);
+
+  const deleteResumeDoc = useCallback(async (resumeId) => {
+    if (!currentUser || !resumeId) return;
+    await deleteDoc(doc(db, 'users', currentUser.uid, 'resumes', resumeId));
+  }, [currentUser]);
+
   const trackDownload = useCallback(async () => {
     if (!currentUser) return { allowed: true, remaining: Infinity };
-    if (userDoc?.isPremium === true || userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
+    if (isActivePremium(userDoc) || userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
 
     const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
     const lastDate = userDoc?.lastDownloadDate || "";
@@ -138,7 +213,8 @@ export function AuthProvider({ children }) {
           // real saved downloadCount from Firestore on every login
           const snap = await getDocFromServer(doc(db, 'users', user.uid));
           if (snap.exists()) {
-            setUserDoc(snap.data());
+            const data = await autoDowngradeIfExpired(snap.data(), user.uid);
+            setUserDoc(data);
           } else {
             const data = await createOrFetchUserDoc(user);
             setUserDoc(data);
@@ -161,7 +237,9 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  const isPremium = userDoc?.isPremium === true;
+  // Checks expiry on every render — immediately reflects a lapsed subscription
+  // without needing a Firestore round-trip (Firestore write-back happens on next login).
+  const isPremium = isActivePremium(userDoc);
 
   const value = {
     currentUser,
@@ -179,6 +257,9 @@ export function AuthProvider({ children }) {
     saveResumeToCloud,
     loadResumeFromCloud,
     trackDownload,
+    loadUserResumes,
+    saveResumeToSubcollection,
+    deleteResumeDoc,
   };
 
   return (

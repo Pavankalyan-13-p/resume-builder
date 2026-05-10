@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, serverTimestamp, deleteField, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Crown, RefreshCw, Search } from 'lucide-react';
+import { useAdminToast } from '../useAdminToast.jsx';
 
 function fmt(ts) {
   if (!ts) return '—';
@@ -9,7 +10,15 @@ function fmt(ts) {
   return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
 }
 
+function isExpired(u) {
+  if (!u.isPremium || !u.premiumExpiresAt) return false;
+  const exp = u.premiumExpiresAt;
+  const d   = exp.toDate ? exp.toDate() : new Date((exp.seconds || 0) * 1000);
+  return d < new Date();
+}
+
 export default function PremiumPage() {
+  const { showToast, toastEl } = useAdminToast();
   const [users, setUsers]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
@@ -23,6 +32,26 @@ export default function PremiumPage() {
       const snap = await getDocs(collection(db, 'users'));
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       list.sort((a, b) => (b.upgradedAt?.seconds ?? b.createdAt?.seconds ?? 0) - (a.upgradedAt?.seconds ?? a.createdAt?.seconds ?? 0));
+
+      // Backfill premiumExpiresAt for legacy premium users who have none.
+      // Uses upgradedAt + plan duration so the date is historically accurate.
+      // Real admin accounts are skipped — they get access via role, not expiry.
+      const backfills = list.filter(u =>
+        u.isPremium && !u.premiumExpiresAt && u.role !== 'admin'
+      );
+      for (const u of backfills) {
+        const base = u.upgradedAt?.toDate
+          ? u.upgradedAt.toDate()
+          : u.upgradedAt?.seconds
+            ? new Date(u.upgradedAt.seconds * 1000)
+            : new Date();
+        const days = u.plan === 'yearly' ? 365 : 30;
+        base.setDate(base.getDate() + days);
+        const premiumExpiresAt = Timestamp.fromDate(base);
+        updateDoc(doc(db, 'users', u.id), { premiumExpiresAt }).catch(() => {});
+        u.premiumExpiresAt = premiumExpiresAt; // update local list immediately
+      }
+
       setUsers(list);
     } catch (e) { setError(e.message); }
     setLoading(false);
@@ -34,15 +63,37 @@ export default function PremiumPage() {
     setBusy(u.id);
     try {
       const next = !u.isPremium;
-      await updateDoc(doc(db, 'users', u.id), {
-        isPremium: next,
-        ...(next ? { upgradedAt: serverTimestamp() } : { downgradedAt: serverTimestamp() }),
-      });
-      setUsers(prev => prev.map(x => x.id === u.id ? {
-        ...x, isPremium: next,
-        ...(next ? { upgradedAt: { seconds: Date.now()/1000 } } : { downgradedAt: { seconds: Date.now()/1000 } }),
-      } : x));
-    } catch (e) { alert('Error: ' + e.message); }
+      if (next) {
+        // Grant Pro — set 30-day expiry so Expires column always has a real date.
+        // Real admin accounts (role==='admin') get permanent access via isAdminUser
+        // in App.jsx regardless, so they don't need deleteField here.
+        const expiresDate = new Date();
+        expiresDate.setDate(expiresDate.getDate() + 30);
+        const premiumExpiresAt = Timestamp.fromDate(expiresDate);
+        await updateDoc(doc(db, 'users', u.id), {
+          isPremium: true,
+          plan: u.plan || 'monthly',
+          upgradedAt: serverTimestamp(),
+          premiumExpiresAt,
+        });
+        setUsers(prev => prev.map(x => x.id === u.id ? {
+          ...x, isPremium: true, plan: x.plan || 'monthly',
+          upgradedAt: { seconds: Date.now() / 1000 }, premiumExpiresAt,
+        } : x));
+      } else {
+        // Revoke — clear expiry
+        await updateDoc(doc(db, 'users', u.id), {
+          isPremium: false,
+          plan: 'free',
+          downgradedAt: serverTimestamp(),
+          premiumExpiresAt: deleteField(),
+        });
+        setUsers(prev => prev.map(x => x.id === u.id ? {
+          ...x, isPremium: false, plan: 'free',
+          downgradedAt: { seconds: Date.now() / 1000 }, premiumExpiresAt: null,
+        } : x));
+      }
+    } catch (e) { showToast(e.message || 'Failed to update plan', 'error'); }
     setBusy('');
   };
 
@@ -56,6 +107,7 @@ export default function PremiumPage() {
 
   return (
     <div className="a-page">
+      {toastEl}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.25rem', flexWrap:'wrap', gap:8 }}>
         <div>
           <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:700, color:'#0f172a' }}>
@@ -117,8 +169,8 @@ export default function PremiumPage() {
                 <th>User</th>
                 <th>Plan</th>
                 <th>Upgraded</th>
-                <th>Downgraded</th>
-                <th>Downloads Used</th>
+                <th>Expires</th>
+                <th>Downloads</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -140,12 +192,21 @@ export default function PremiumPage() {
                     <div style={{ fontSize:'0.72rem', color:'#94a3b8' }}>{u.email}</div>
                   </td>
                   <td>
-                    <span className={`bdg ${u.isPremium ? 'bdg-pro' : 'bdg-free'}`}>
-                      {u.isPremium ? '★ Pro' : 'Free'}
+                    <span className={`bdg ${u.isPremium ? (isExpired(u) ? 'bdg-err' : 'bdg-pro') : 'bdg-free'}`}>
+                      {u.isPremium ? (isExpired(u) ? '⚠ Expired' : '★ Pro') : 'Free'}
                     </span>
+                    {u.role === 'admin' && (
+                      <span style={{ marginLeft: 5, fontSize: '0.65rem', color: '#94a3b8' }}>admin</span>
+                    )}
                   </td>
                   <td style={{ fontSize:'0.8rem', color:'#64748b' }}>{fmt(u.upgradedAt)}</td>
-                  <td style={{ fontSize:'0.8rem', color:'#64748b' }}>{fmt(u.downgradedAt)}</td>
+                  <td style={{ fontSize:'0.8rem', color: isExpired(u) ? '#dc2626' : '#64748b', fontWeight: isExpired(u) ? 600 : 400 }}>
+                    {u.premiumExpiresAt
+                      ? fmt(u.premiumExpiresAt)
+                      : u.role === 'admin'
+                        ? '∞ No expiry'
+                        : '—'}
+                  </td>
                   <td>
                     <span style={{ fontWeight:600, color:'#1e293b' }}>{u.downloadCount || 0}</span>
                     {!u.isPremium && <span style={{ color:'#94a3b8' }}>/5</span>}
