@@ -706,7 +706,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background: "#fafaf9", borderTop: "1px solid #e8e8e8", padding: "1.75rem 2.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+      <footer style={{ background: "#fafaf9", borderTop: "1px solid #e8e8e8", padding: "1.5rem 2.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem 1.25rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ width: 26, height: 26, background: "linear-gradient(135deg, #1a2e4a, #312e81)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Sparkles style={{ width: 13, height: 13, color: "#fff" }} />
@@ -714,7 +714,22 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
           <span style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontWeight: 700, color: "#1a2e4a" }}>Foliant</span>
           <span style={{ color: "#bbb", fontSize: "0.8rem" }}>· AI Resume Builder</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.5rem 1rem" }}>
+          <a href="/privacy" style={{ color: "#aaa", fontSize: "0.8rem", textDecoration: "none", transition: "color 0.15s" }}
+            onMouseEnter={e => { e.target.style.color = '#1a2e4a'; }} onMouseLeave={e => { e.target.style.color = '#aaa'; }}>
+            Privacy
+          </a>
+          <span style={{ color: "#ddd", fontSize: "0.75rem" }}>·</span>
+          <a href="/terms" style={{ color: "#aaa", fontSize: "0.8rem", textDecoration: "none", transition: "color 0.15s" }}
+            onMouseEnter={e => { e.target.style.color = '#1a2e4a'; }} onMouseLeave={e => { e.target.style.color = '#aaa'; }}>
+            Terms
+          </a>
+          <span style={{ color: "#ddd", fontSize: "0.75rem" }}>·</span>
+          <a href="/refund" style={{ color: "#aaa", fontSize: "0.8rem", textDecoration: "none", transition: "color 0.15s" }}
+            onMouseEnter={e => { e.target.style.color = '#1a2e4a'; }} onMouseLeave={e => { e.target.style.color = '#aaa'; }}>
+            Refunds
+          </a>
+          <span style={{ color: "#ddd", fontSize: "0.75rem" }}>·</span>
           <button
             onClick={onContactSupport}
             style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: "0.8rem", padding: 0, fontFamily: "inherit", transition: "color 0.15s" }}
