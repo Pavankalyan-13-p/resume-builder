@@ -24,11 +24,14 @@ app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "10mb" }));
 
 let browser = null;
+let launchPromise = null; // prevents multiple simultaneous launches under concurrent requests
 
 async function getBrowser() {
-  if (!browser || !browser.isConnected()) {
-    browser = await puppeteer.launch({
-      headless: "new",
+  if (browser?.isConnected()) return browser;
+  // If a launch is already in flight, wait for that one rather than starting a second
+  if (!launchPromise) {
+    launchPromise = puppeteer.launch({
+      headless: true,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -36,13 +39,27 @@ async function getBrowser() {
         "--disable-gpu",
         "--font-render-hinting=none",
       ],
+    }).then(b => {
+      browser = b;
+      launchPromise = null;
+      console.log("[pdf-server] browser ready");
+      return b;
+    }).catch(err => {
+      launchPromise = null;
+      browser = null;
+      throw err;
     });
-    console.log("[pdf-server] browser ready");
   }
-  return browser;
+  return launchPromise;
 }
 
 app.post("/api/pdf", async (req, res) => {
+  // Give the full generation pipeline up to 90 s before returning a timeout error.
+  // This covers cold-start browser launch (~15s) + page load + render + pdf() on Render free tier.
+  res.setTimeout(90_000, () => {
+    if (!res.headersSent) res.status(504).json({ error: "PDF generation timed out. The server is warming up — please try again in a moment." });
+  });
+
   const { html, filename = "resume" } = req.body;
 
   // Validate incoming HTML
@@ -67,7 +84,7 @@ app.post("/api/pdf", async (req, res) => {
     console.log("[pdf-server] loading HTML content...");
     await page.setContent(html, {
       waitUntil: ["load", "networkidle0"],
-      timeout: 30_000,
+      timeout: 60_000,
     });
 
     // Wait for all fonts to finish loading in the page context
@@ -409,7 +426,7 @@ process.on("unhandledRejection", reason => {
   console.error("[pdf-server] unhandledRejection:", reason);
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log("──────────────────────────────────────────────────────");
   console.log(`  server ready on http://localhost:${PORT}`);
   console.log(`  POST /api/pdf              — generate PDF`);
@@ -419,4 +436,10 @@ app.listen(PORT, () => {
   console.log(`  POST /api/verify-payment   — Razorpay verify signature`);
   console.log(`  GET  /health               — liveness check`);
   console.log("──────────────────────────────────────────────────────");
+  // Pre-warm: launch the browser immediately so the first PDF request
+  // doesn't pay the full cold-start Chrome launch cost.
+  getBrowser().catch(err => console.warn("[pdf-server] browser pre-warm failed:", err.message));
 });
+// 120 s socket-level timeout — prevents Node/Render from cutting the TCP connection
+// before a slow PDF generation (cold-start) can complete and send its response.
+server.setTimeout(120_000);

@@ -3,9 +3,13 @@ import { FileText } from "lucide-react";
 
 const MESSAGES = [
   "Preparing your professional PDF...",
-  "Optimizing resume layout...",
-  "Generating PDF...",
+  "Launching PDF engine...",
+  "Loading fonts and styles...",
+  "Rendering resume layout...",
+  "Generating PDF file...",
+  "Polishing final output...",
   "Almost ready...",
+  "Still working — nearly done...",
 ];
 
 export default function PdfLoadingModal({ visible }) {
@@ -102,10 +106,10 @@ export default function PdfLoadingModal({ visible }) {
 
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "0.75rem", color: "#9ca3af", letterSpacing: "0.02em" }}>
-            This may take a few seconds
+            Usually ready in 10–20 seconds
           </div>
           <div style={{ fontSize: "0.7rem", color: "#c4c9d4", marginTop: "4px", letterSpacing: "0.01em" }}>
-            First resume may take a little longer to warm up
+            First download of the day may take up to 60 s while the server warms up
           </div>
         </div>
       </div>

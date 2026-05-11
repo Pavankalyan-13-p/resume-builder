@@ -198,15 +198,27 @@ async function exportPDF(resume) {
 
   const serverUrl = import.meta.env.VITE_PDF_SERVER_URL || '';
   let response;
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), 90_000);
   try {
     response = await fetch(`${serverUrl}/api/pdf`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ html, filename }),
+      signal: controller.signal,
     });
   } catch (networkErr) {
+    if (networkErr.name === 'AbortError') {
+      throw new Error("PDF generation timed out — the server is warming up. Please try again in a moment.");
+    }
     console.error("[PDF export] fetch failed:", networkErr);
-    throw new Error("PDF server is not running. Open a terminal and run: npm run server");
+    throw new Error(
+      import.meta.env.DEV
+        ? "PDF server is not running. Open a terminal and run: npm run server"
+        : "Could not reach the PDF service. Please try again."
+    );
+  } finally {
+    clearTimeout(abortTimer);
   }
 
   if (!response.ok) {
@@ -919,37 +931,47 @@ export default function App() {
   const handlePDFDownload = async () => {
     if (pdfGenerating) return;
     if (isPreviewLocked) { setUpgradeModal('monthly'); return; }
-    const { allowed, remaining } = await trackDownload();
-    if (!allowed) {
+    // Gate check — read from already-loaded userDoc, no Firestore write yet
+    if (currentUser && !effectivePremium && downloadsRemaining <= 0) {
       showToast("Daily limit reached — 5 downloads/day on the free plan. Upgrade to Pro for unlimited.", "error");
       setUpgradeModal('monthly');
       return;
     }
-    if (currentUser && remaining <= 1) {
-      showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
-    }
     setPdfGenerating(true);
     try {
       await exportPDF(resume);
+      // Increment quota ONLY after the PDF was successfully received by the browser
+      const { remaining } = await trackDownload();
+      if (currentUser && !effectivePremium && remaining <= 1) {
+        showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
+      }
     } catch (err) {
       console.error("[PDF export]", err);
       showToast(err?.message || "PDF download failed. Please try again.", "error");
+      // trackDownload intentionally NOT called — failed downloads must not consume quota
     } finally {
       setPdfGenerating(false);
     }
   };
 
   const handleWordDownload = async () => {
-    const { allowed, remaining } = await trackDownload();
-    if (!allowed) {
+    // Gate check — no Firestore write yet
+    if (currentUser && !effectivePremium && downloadsRemaining <= 0) {
       showToast("Daily limit reached — 5 downloads/day on the free plan. Upgrade to Pro for unlimited.", "error");
       setUpgradeModal('monthly');
       return;
     }
-    if (currentUser && remaining <= 1) {
-      showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
+    try {
+      await exportWord(resume, templateId);
+      // Increment quota ONLY after the Word file was successfully generated
+      const { remaining } = await trackDownload();
+      if (currentUser && !effectivePremium && remaining <= 1) {
+        showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
+      }
+    } catch {
+      showToast("Word download failed. Please try again.", "error");
+      // trackDownload intentionally NOT called — failed downloads must not consume quota
     }
-    exportWord(resume, templateId).catch(() => showToast("Word download failed. Please try again.", "error"));
   };
 
   return (
