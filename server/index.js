@@ -1,7 +1,7 @@
 import { config as dotenvConfig } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenvConfig({ path: join(__dirname, '.env') });
@@ -27,16 +27,40 @@ app.use(express.json({ limit: "10mb" }));
 let browser = null;
 let launchPromise = null; // prevents multiple simultaneous launches under concurrent requests
 
-// Resolve Chrome path dynamically from whatever version this puppeteer
-// package bundled. Passing executablePath explicitly makes Puppeteer use
-// the binary directly and skip its internal version-compatibility check,
-// which otherwise warns when the cached revision doesn't match exactly.
-// Returns undefined only if the resolved path doesn't exist on disk, so
-// Puppeteer falls back to its own discovery without erroring.
+// Locate Chrome by scanning Puppeteer's cache directory with plain fs calls.
+//
+// Why NOT puppeteer.executablePath():
+//   That API validates the expected revision against the cache and emits
+//   "Could not find Chrome (ver. X)" when the cached revision (e.g. 148)
+//   differs from what the package bundled (e.g. 147) — the warning fires
+//   inside executablePath() itself, before it returns a fallback path.
+//
+// This function reads puppeteer.configuration.cacheDirectory (safe — just a
+// config object read, no fs ops) and scans for any installed Chrome revision,
+// newest first. PUPPETEER_CACHE_DIR takes priority so Render's
+// /opt/render/.cache/puppeteer path (set in render.yaml) is always honoured.
 function resolveChromeExecutable() {
   try {
-    const p = puppeteer.executablePath();
-    if (p && existsSync(p)) return p;
+    const cacheDir =
+      process.env.PUPPETEER_CACHE_DIR ||
+      puppeteer.configuration?.cacheDirectory;
+    if (!cacheDir) return undefined;
+
+    const chromeCacheDir = join(cacheDir, 'chrome');
+    if (!existsSync(chromeCacheDir)) return undefined;
+
+    // Sort revision folder names descending so the newest build is tried first
+    const revisions = readdirSync(chromeCacheDir).sort().reverse();
+    for (const rev of revisions) {
+      for (const exe of [
+        join(chromeCacheDir, rev, 'chrome-win64',    'chrome.exe'),
+        join(chromeCacheDir, rev, 'chrome-linux64',  'chrome'),
+        join(chromeCacheDir, rev, 'chrome-mac-x64',  'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing'),
+        join(chromeCacheDir, rev, 'chrome-mac-arm64','Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing'),
+      ]) {
+        if (existsSync(exe)) return exe;
+      }
+    }
   } catch (_) {}
   return undefined;
 }
