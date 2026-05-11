@@ -196,7 +196,7 @@ async function exportPDF(resume) {
 
   console.log("[PDF export] HTML document length:", html.length, "chars");
 
-  const serverUrl = import.meta.env.VITE_PDF_SERVER_URL;
+  const serverUrl = import.meta.env.VITE_PDF_SERVER_URL || '';
   let response;
   try {
     response = await fetch(`${serverUrl}/api/pdf`, {

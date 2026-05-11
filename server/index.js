@@ -14,9 +14,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const ALLOWED = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173").split(",");
+// In production the frontend is served from the same Express process (same origin),
+// so reflect any origin. In dev restrict to the Vite dev server ports.
+const CORS_ORIGIN = process.env.NODE_ENV === 'production'
+  ? true
+  : (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173").split(",");
 
-app.use(cors({ origin: ALLOWED }));
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "10mb" }));
 
 let browser = null;
@@ -380,6 +384,15 @@ app.get("/health", (_req, res) => {
   console.log("[pdf-server] GET /health — ok");
   res.json({ ok: true, port: PORT });
 });
+
+// ── Serve Vite frontend in production ─────────────────────────────────────────
+// Must be registered AFTER all API routes so /api/* is never caught by the
+// static middleware. The wildcard fallback enables React Router client-side routing.
+if (process.env.NODE_ENV === 'production') {
+  const distPath = join(__dirname, '..', 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')));
+}
 
 const shutdown = async () => {
   console.log("[pdf-server] shutting down...");

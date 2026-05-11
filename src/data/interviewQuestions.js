@@ -1,6 +1,8 @@
 import { auth } from '../firebase/config.js';
 
-const SERVER = import.meta.env.VITE_AI_SERVER_URL || import.meta.env.VITE_PDF_SERVER_URL || 'http://localhost:3001';
+// Empty string = relative URL, so production API calls hit the same Express origin.
+// In dev, VITE_AI_SERVER_URL=http://localhost:3001 (set in .env) overrides this.
+const SERVER = import.meta.env.VITE_AI_SERVER_URL || import.meta.env.VITE_PDF_SERVER_URL || '';
 
 const FRIENDLY = {
   429: 'AI is temporarily busy. Please try again in a moment.',
