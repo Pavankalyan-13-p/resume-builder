@@ -1,6 +1,7 @@
 import { config as dotenvConfig } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenvConfig({ path: join(__dirname, '.env') });
@@ -26,19 +27,39 @@ app.use(express.json({ limit: "10mb" }));
 let browser = null;
 let launchPromise = null; // prevents multiple simultaneous launches under concurrent requests
 
+// Resolve Chrome path dynamically from whatever version this puppeteer
+// package bundled. Passing executablePath explicitly makes Puppeteer use
+// the binary directly and skip its internal version-compatibility check,
+// which otherwise warns when the cached revision doesn't match exactly.
+// Returns undefined only if the resolved path doesn't exist on disk, so
+// Puppeteer falls back to its own discovery without erroring.
+function resolveChromeExecutable() {
+  try {
+    const p = puppeteer.executablePath();
+    if (p && existsSync(p)) return p;
+  } catch (_) {}
+  return undefined;
+}
+
 async function getBrowser() {
   if (browser?.isConnected()) return browser;
   // If a launch is already in flight, wait for that one rather than starting a second
   if (!launchPromise) {
+    const chromeArgs = [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--font-render-hinting=none",
+    ];
+    const executablePath = resolveChromeExecutable();
     launchPromise = puppeteer.launch({
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--font-render-hinting=none",
-      ],
+      // Only set executablePath when we have a confirmed path — this bypasses
+      // Puppeteer's internal version check that causes the revision-mismatch warning.
+      // On Render, executablePath() respects PUPPETEER_CACHE_DIR set in render.yaml.
+      ...(executablePath && { executablePath }),
+      args: chromeArgs,
     }).then(b => {
       browser = b;
       launchPromise = null;
