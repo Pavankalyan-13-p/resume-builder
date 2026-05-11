@@ -40,12 +40,12 @@ const EMPTY_RESUME = {
 const SAMPLE_RESUME = {
   _isSample: true,
   personal: {
-    name: "Pavan Kalyan S",
+    name: "Pawan Kalyan",
     title: "Senior Product Designer",
-    email: "pavan@email.com",
+    email: "pawan@email.com",
     phone: "+1 (555) 234-5678",
     location: "San Francisco, CA",
-    website: "Pavan.design",
+    website: "pawan.design",
     linkedin: "linkedin.com/in/alexchen",
     github: "github.com/alexchen",
     summary: "Senior Product Designer with 8+ years crafting intuitive experiences for fintech and SaaS products. Led design systems adopted across 12 product teams, reducing design debt by 60%. Passionate about accessibility, user research, and mentoring."
