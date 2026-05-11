@@ -203,7 +203,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
             <div style={{ borderBottom: "2px solid #1a2e4a", paddingBottom: "14px", marginBottom: "14px" }}>
               <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "#1a2e4a", marginBottom: "2px" }}>Foliant-AI</div>
               <div style={{ fontSize: "0.8rem", color: "#666", fontStyle: "italic" }}>Software Engineer · React / Node.js</div>
-              <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px", fontFamily: "system-ui, sans-serif" }}>ai@foliant.app · Bangalore, India</div>
+              <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px", fontFamily: "system-ui, sans-serif" }}>ai@foliant.app · Andhra Pradesh, India</div>
             </div>
             {/* AI-generated summary preview */}
             <div style={{ fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, color: "#4f46e5", marginBottom: "6px", fontFamily: "system-ui, sans-serif", display: "flex", alignItems: "center", gap: "4px" }}>
