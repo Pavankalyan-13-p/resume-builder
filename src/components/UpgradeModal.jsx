@@ -4,9 +4,11 @@ import { addDoc, updateDoc, collection, serverTimestamp } from 'firebase/firesto
 import { db } from '../firebase/config';
 
 // ── Backend URL (same server as AI routes) ────────────────────────────────────
+// Empty string = relative URL so production calls hit the same Express origin.
+// In dev, VITE_AI_SERVER_URL=http://localhost:3001 (set in .env) overrides this.
 const SERVER = import.meta.env.VITE_AI_SERVER_URL
   || import.meta.env.VITE_PDF_SERVER_URL
-  || 'http://localhost:3001';
+  || '';
 
 // ── Plan config (amounts in paise = INR × 100) ───────────────────────────────
 const PLAN_CFG = {
