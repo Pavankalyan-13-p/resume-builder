@@ -358,12 +358,12 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
                   AI Interview Simulator
                 </h3>
                 <p style={{ fontSize: "0.88rem", color: "#c4b5fd", lineHeight: 1.75, margin: "0 0 1.5rem" }}>
-                  50+ interview questions generated <strong style={{ color: "#e0d9ff" }}>directly from your resume</strong>. Practice HR, Technical, Role-Specific, and Situational rounds with sample answers and strategy hints from Gemini AI.
+                  5 targeted rounds — HR, Technical, Role-Specific, Project-Based, and Situational — with questions generated <strong style={{ color: "#e0d9ff" }}>directly from your resume</strong>. Gemini AI reveals the answer strategy and a sample professional response for every question.
                 </p>
                 <div style={{ display: "flex", gap: "1.5rem", marginBottom: "1.5rem" }}>
                   {[
-                    { n: "5", label: "Question Rounds" },
-                    { n: "50+", label: "AI Questions" },
+                    { n: "5", label: "Practice Rounds" },
+                    { n: "26", label: "Total Questions" },
                     { n: "AI", label: "Hints & Answers" },
                   ].map(s => (
                     <div key={s.label}>
@@ -659,7 +659,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
                   "All 10 premium templates (+ free 5 = 15 total)",
                   "AI Resume Summary Generator",
                   "Personalized Job Matches",
-                  "AI Interview Simulator — 50+ questions",
+                  "AI Interview Simulator — 5 rounds, 26 AI questions",
                   "Unlimited PDF exports",
                   "Priority Support + all future features",
                 ].map(f => (
