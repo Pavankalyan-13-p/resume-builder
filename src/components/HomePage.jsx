@@ -660,7 +660,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
                   "AI Resume Summary Generator",
                   "Personalized Job Matches",
                   "AI Interview Simulator — 5 rounds, 26 AI questions",
-                  "Up to 10 PDF & Word exports/day",
+                  "PDF & Word exports — built for active job seekers",
                   "Priority Support + all future features",
                 ].map(f => (
                   <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "0.875rem", color: "#333", lineHeight: 1.4 }}>
