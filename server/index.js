@@ -327,24 +327,24 @@ const CAT_LABELS = {
 // Per-category coaching so the AI stays focused and varied
 const CAT_INSTRUCTIONS = {
   hr: `Focus: personal fit, motivation, career goals, work style.
-Rotate across: self-introduction variation, why this role/company, career goals, handling feedback, strengths, professional growth, team preferences.
-Q1: use a self-intro style. Later Qs: shift to motivation or goals. Never repeat the same angle.`,
+Rotate across: self-intro, why this role, career goals, handling feedback, strengths, professional growth.
+Sound like a recruiter — warm, brief, conversational. No compound questions.`,
 
-  technical: `Focus: hands-on technical knowledge specific to the candidate's skill set.
-Ask about a real scenario — trade-offs, debugging, architecture, or practical usage of a tool they listed.
-Avoid textbook definitions. Frame it as "How would you..." or "Walk me through...".`,
+  technical: `Focus: hands-on skills from the candidate's exact tech stack.
+Ask something practical — "How would you..." or "Walk me through...". Reference a specific skill they listed.
+No textbook definitions. One clear technical question.`,
 
-  roleSpecific: `Focus: expertise unique to this exact job title.
-Ask something only a practitioner in this role would handle confidently — role-specific workflows, decisions, or best practices.
-Avoid generic questions that apply to any developer or professional.`,
+  roleSpecific: `Focus: what someone in this exact job title handles day-to-day.
+Ask something a hiring manager would ask to test real on-the-job knowledge.
+Avoid questions that apply to any developer or professional.`,
 
-  projects: `Focus: one of the candidate's listed projects.
-Ask about decisions made, technical challenges, what they'd change in hindsight, or measurable impact.
-Keep it conversational: "Walk me through..." or "What was the hardest part of...".`,
+  projects: `Focus: one project the candidate listed.
+Ask about a decision, challenge, or measurable outcome — short and conversational.
+Use "Walk me through..." or "What was the hardest part of...".`,
 
-  situational: `Focus: behavioural / STAR-method scenarios.
-Use "Tell me about a time..." or "Give me an example of..." framing.
-Rotate across: handling conflict, tight deadlines, recovering from a mistake, cross-team collaboration, or stepping up without being asked.`,
+  situational: `Focus: one behavioural scenario.
+Use "Tell me about a time..." or "How did you handle..." framing.
+One clean scenario — no compound questions. Rotate: conflict, deadlines, mistakes, collaboration.`,
 };
 
 app.post('/api/ai-interview', requirePremium, async (req, res) => {
@@ -360,7 +360,7 @@ app.post('/api/ai-interview', requirePremium, async (req, res) => {
   const skillStr = skills.slice(0, 6).join(', ') || 'general';
   const qNum = Math.max(1, Math.min(questionNumber, 10));
 
-  const prompt = `You are a senior interviewer at a tech company running the ${CAT_LABELS[category]} round for a ${role} candidate.
+  const prompt = `You are an experienced interviewer conducting a live ${CAT_LABELS[category]} round for a ${role} candidate. Ask one real interview question — short, natural, conversational. Think: what would a real interviewer actually say out loud?
 
 Candidate:
 • Role: ${role}
@@ -369,14 +369,15 @@ ${context ? `• Background: ${context}` : ''}
 
 ${CAT_INSTRUCTIONS[category]}
 
-This is question ${qNum} of the session — make sure it targets a different angle than earlier questions would cover.
+This is question ${qNum} of the session — target a fresh angle not already covered.
+
+OUTPUT RULES:
+- "question": ≤ 15 words. Direct, conversational. No openers like "Could you please" or "I'd like you to".
+- "hint":     3 prep bullets, ≤ 10 words each, starting with an action verb.
+- "answer":   1–2 sentences, ≤ 35 words total. First person. One concrete detail (tool, number, or outcome). No filler openers like "I believe" or "Great question".
 
 OUTPUT FORMAT — pure JSON only, no markdown, no code fences:
-{
-  "question": "<single clear interview question, ≤ 25 words, realistic and specific>",
-  "hint": "• <point 1, ≤ 12 words>\n• <point 2, ≤ 12 words>\n• <point 3, ≤ 12 words>",
-  "answer": "<2–3 sentences in first person, professional, specific — mention tools or numbers where natural. No filler phrases.>"
-}`;
+{"question":"...","hint":"• ...\n• ...\n• ...","answer":"..."}`;
 
   try {
     const result = await gemini.generateContent(prompt);

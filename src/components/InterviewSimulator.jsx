@@ -121,6 +121,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
 
   // ── History & session state ─────────────────────────────────────────────
   const sessionLogRef = useRef([]); // {question, hint, answer, nailed} — avoids stale closures
+  const sessionIdRef  = useRef(null); // Firestore doc ID for the current session (set on first save)
   const [sessions, setSessions]           = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewSession, setViewSession]     = useState(null);
@@ -144,25 +145,38 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
   const role     = resume?.personal?.title || '';
   const skills   = resume?.skills || [];
 
-  // ── Session saving ──────────────────────────────────────────────────────
+  // ── Session saving (incremental — called after every question load/answer) ──
 
-  const saveSession = async (catId, log, nailed) => {
+  const saveSessionProgress = async (catId, log, isComplete = false) => {
     if (!user?.uid || log.length === 0) return;
-    const cat = CATS.find(c => c.id === catId) || CATS[0];
-    const sc  = Math.round((nailed / log.length) * 100);
+    const cat    = CATS.find(c => c.id === catId) || CATS[0];
+    const nailed = log.filter(q => q.nailed).length;
+    const sc     = Math.round((nailed / log.length) * 100);
+    const data   = {
+      category:       catId,
+      categoryLabel:  cat.label,
+      categoryEmoji:  cat.emoji,
+      role:           resume?.personal?.title || 'Professional',
+      questions:      log,
+      nailedCount:    nailed,
+      score:          sc,
+      totalQuestions: log.length,
+      complete:       isComplete,
+      updatedAt:      serverTimestamp(),
+    };
     try {
-      await addDoc(collection(db, 'users', user.uid, 'interviewSessions'), {
-        category:       catId,
-        categoryLabel:  cat.label,
-        categoryEmoji:  cat.emoji,
-        role:           resume?.personal?.title || 'Professional',
-        questions:      log,
-        nailedCount:    nailed,
-        score:          sc,
-        totalQuestions: log.length,
-        createdAt:      serverTimestamp(),
-      });
-    } catch (_) {} // non-critical — session is already complete in the UI
+      if (!sessionIdRef.current) {
+        // First save — create the Firestore doc and store its ID for subsequent updates
+        const ref = await addDoc(collection(db, 'users', user.uid, 'interviewSessions'), {
+          ...data,
+          createdAt: serverTimestamp(),
+        });
+        sessionIdRef.current = ref.id;
+      } else {
+        // Update in place — keeps one doc per round regardless of how many questions were answered
+        await setDoc(doc(db, 'users', user.uid, 'interviewSessions', sessionIdRef.current), data, { merge: true });
+      }
+    } catch (_) {} // non-critical
   };
 
   // ── History loading ─────────────────────────────────────────────────────
@@ -206,6 +220,8 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
         ...sessionLogRef.current.slice(0, qNumber - 1),
         entry,
       ];
+      // Save immediately — even 1 generated question must appear in history
+      saveSessionProgress(catId, sessionLogRef.current, false);
     } catch (err) {
       if (err.code === 'PREMIUM_REQUIRED') {
         setPhase('select');
@@ -239,11 +255,11 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
   // ── Navigation helpers ──────────────────────────────────────────────────
 
   const next = () => {
-    const nextIdx = qIdx + 1;
-    if (nextIdx >= total) {
-      const log    = sessionLogRef.current;
-      const nailed = log.filter(q => q.nailed).length;
-      saveSession(category, log, nailed);
+    const nextIdx    = qIdx + 1;
+    const isComplete = nextIdx >= total;
+    // Save on every navigation — captures nailed flags updated in nail() before setTimeout
+    saveSessionProgress(category, sessionLogRef.current, isComplete);
+    if (isComplete) {
       setPhase('done');
     } else {
       setQIdx(nextIdx);
@@ -284,6 +300,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
       }
     }
     sessionLogRef.current = [];
+    sessionIdRef.current  = null; // fresh doc for every new round
     setCategory(id);
     setQIdx(0);
     setRevealed(false);
@@ -685,6 +702,11 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                         <span style={{ fontSize:'0.62rem', background: s.nailedCount > 0 ? 'rgba(21,128,61,0.15)' : '#0f172a', color: s.nailedCount > 0 ? '#4ade80' : '#475569', padding:'2px 8px', borderRadius:99 }}>
                           {s.nailedCount} nailed
                         </span>
+                        {s.complete === false && (
+                          <span style={{ fontSize:'0.62rem', background:'rgba(249,115,22,0.12)', color:'#f97316', padding:'2px 8px', borderRadius:99 }}>
+                            Partial
+                          </span>
+                        )}
                         <span style={{ fontSize:'0.62rem', background:'#0f172a', color:'#64748b', padding:'2px 8px', borderRadius:99 }}>
                           Review →
                         </span>
