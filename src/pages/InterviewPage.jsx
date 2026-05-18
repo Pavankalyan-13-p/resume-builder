@@ -21,7 +21,6 @@ export default function InterviewPage() {
     uid:   currentUser.uid,
     email: currentUser.email,
     name:  userDoc.displayName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-    plan:  effectivePremium ? 'pro' : (userDoc.plan || 'free'),
     ...userDoc,
     plan:  effectivePremium ? 'pro' : (userDoc.plan || 'free'),
   } : null;

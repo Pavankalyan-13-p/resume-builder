@@ -315,6 +315,65 @@ Rules:
   }
 });
 
+// ── Gemini JSON parsing helpers ───────────────────────────────────────────────
+
+// Fixes literal control characters (newlines, tabs, etc.) that appear inside
+// JSON string values — the most common cause of "Bad control character" errors
+// from Gemini responses that use real newlines instead of \n escape sequences.
+function fixStringControlChars(str) {
+  let result  = '';
+  let inStr   = false;
+  let escaped = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch   = str[i];
+    const code = str.charCodeAt(i);
+    if (escaped)              { result += ch; escaped = false; continue; }
+    if (ch === '\\' && inStr) { result += ch; escaped = true;  continue; }
+    if (ch === '"')           { inStr = !inStr; result += ch;  continue; }
+    if (inStr && code < 32) {
+      if      (ch === '\n') result += '\\n';
+      else if (ch === '\r') result += '\\r';
+      else if (ch === '\t') result += '\\t';
+      else result += `\\u${code.toString(16).padStart(4, '0')}`;
+      continue;
+    }
+    result += ch;
+  }
+  return result;
+}
+
+// Robustly extracts {question, hint, answer} from a Gemini text response.
+// Tries JSON.parse after sanitization; falls back to regex extraction so a
+// single malformed response never crashes the simulator.
+function parseInterviewJSON(raw) {
+  // Pass 1: strip code fences, extract the JSON object substring
+  let s = raw.trim()
+    .replace(/^```json\s*/im, '')
+    .replace(/^```\s*/im, '')
+    .replace(/```\s*$/m, '')
+    .trim();
+  const jStart = s.indexOf('{');
+  const jEnd   = s.lastIndexOf('}');
+  if (jStart !== -1 && jEnd > jStart) s = s.slice(jStart, jEnd + 1);
+
+  // Pass 2: fix control characters inside strings, then try JSON.parse
+  try {
+    const parsed = JSON.parse(fixStringControlChars(s));
+    if (parsed?.question) return parsed;
+  } catch (_) {}
+
+  // Pass 3: regex field extraction — tolerant of structural brokenness
+  const pick = (field) => {
+    const re = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i');
+    const m  = raw.match(re);
+    return m ? m[1].replace(/\\n/g, '\n').trim() : '';
+  };
+  const question = pick('question');
+  if (question) return { question, hint: pick('hint'), answer: pick('answer') };
+
+  return null; // complete failure — caller returns 502
+}
+
 // ── POST /api/ai-interview ────────────────────────────────────────────────────
 const CAT_LABELS = {
   hr:           'HR & Personal',
@@ -383,11 +442,17 @@ OUTPUT FORMAT — pure JSON only, no markdown, no code fences:
 
   try {
     const result = await gemini.generateContent(prompt);
-    const raw    = result.response.text().trim()
-      .replace(/^```json?\s*/i, '').replace(/```\s*$/, '').trim();
-    const parsed = JSON.parse(raw);
-    if (!parsed.question) throw new Error('Missing question field in AI response');
-    res.json({ question: parsed.question, hint: parsed.hint ?? '', answer: parsed.answer ?? '' });
+    const raw    = result.response.text();
+    const parsed = parseInterviewJSON(raw);
+    if (!parsed?.question) {
+      console.error('[ai-interview] parse failure — raw:', raw.slice(0, 300));
+      return res.status(502).json({ error: 'AI generation failed. Please try again.' });
+    }
+    res.json({
+      question: parsed.question.trim(),
+      hint:     (parsed.hint   ?? '').trim(),
+      answer:   (parsed.answer ?? '').trim(),
+    });
   } catch (err) {
     console.error('[ai-interview]', err.message);
     if (isQuotaError(err))
