@@ -15,6 +15,32 @@ function fmt(ts) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function fmtIso(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// Normalize both old-format (message + responses) and new-format (messages[]) tickets
+function normalizeMessages(ticket) {
+  if (ticket.messages?.length > 0) return ticket.messages;
+  const msgs = [];
+  if (ticket.message) {
+    msgs.push({
+      sender: 'user',
+      text: ticket.message,
+      createdAt: ticket.createdAt?.toDate?.().toISOString() ?? new Date().toISOString(),
+    });
+  }
+  for (const r of ticket.responses ?? []) {
+    msgs.push({
+      sender: r.from === 'admin' ? 'admin' : 'user',
+      text: r.text,
+      createdAt: r.at ?? new Date().toISOString(),
+    });
+  }
+  return msgs;
+}
+
 const STATUS_BDG = { open: 'bdg-open', replied: 'bdg-info', closed: 'bdg-closed', resolved: 'bdg-ok' };
 
 export default function SupportPage() {
@@ -30,62 +56,67 @@ export default function SupportPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
   const [form, setForm] = useState({ email: '', subject: '', message: '', category: 'other' });
-  const [tick, setTick] = useState(0); // increment to re-subscribe
+  const [tick, setTick] = useState(0);
   const unsubRef = useRef(null);
+  const bottomRef = useRef(null);
 
   // ── Real-time subscription ────────────────────────────────────────────────
   useEffect(() => {
     setLoading(true);
     setError('');
-
     if (unsubRef.current) unsubRef.current();
 
     let q;
-    try {
-      q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
-    } catch {
-      q = collection(db, COLLECTION);
-    }
+    try { q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc')); }
+    catch { q = collection(db, COLLECTION); }
 
-    unsubRef.current = onSnapshot(
-      q,
-      snap => {
-        setTickets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      },
-      err => {
-        setError(err.message);
-        setLoading(false);
-      }
+    unsubRef.current = onSnapshot(q,
+      snap => { setTickets(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+      err  => { setError(err.message); setLoading(false); },
     );
-
     return () => { if (unsubRef.current) unsubRef.current(); };
   }, [tick]);
 
   // Keep selected in sync with real-time updates (don't interrupt active reply)
   useEffect(() => {
     if (!selected || replyBusy) return;
-    const refreshed = tickets.find(t => t.id === selected.id);
-    if (refreshed) setSelected(refreshed);
+    const fresh = tickets.find(t => t.id === selected.id);
+    if (fresh) setSelected(fresh);
   }, [tickets]); // eslint-disable-line
+
+  // Scroll thread to bottom when selection changes or messages arrive
+  const selectedMessages = selected ? normalizeMessages(selected) : [];
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedMessages.length, selected?.id]);
+
+  // Clear unreadByAdmin when admin opens a ticket
+  useEffect(() => {
+    if (selected?.unreadByAdmin) {
+      updateDoc(doc(db, COLLECTION, selected.id), { unreadByAdmin: false }).catch(() => {});
+    }
+  }, [selected?.id]); // eslint-disable-line
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const sendReply = async () => {
     if (!reply.trim() || !selected) return;
     setReplyBusy(true);
+    const newMsg = {
+      sender: 'admin',
+      text: reply.trim(),
+      createdAt: new Date().toISOString(),
+      senderName: 'Support',
+    };
     try {
-      const responses = [
-        ...(selected.responses || []),
-        { text: reply.trim(), from: 'admin', at: new Date().toISOString() },
-      ];
+      const existing = normalizeMessages(selected);
       await updateDoc(doc(db, COLLECTION, selected.id), {
-        responses,
-        status: 'replied',
-        lastReplyAt: serverTimestamp(),
+        messages:     [...existing, newMsg],
+        status:       'replied',
+        unreadByUser: true,
+        unreadByAdmin: false,
+        updatedAt:    serverTimestamp(),
+        lastReplyAt:  serverTimestamp(),
       });
-      // Optimistic update so panel reflects immediately
-      const updated = { ...selected, responses, status: 'replied' };
-      setSelected(updated);
       setReply('');
       showToast('Reply sent', 'success');
     } catch (e) {
@@ -97,7 +128,6 @@ export default function SupportPage() {
   const updateStatus = async (id, status) => {
     try {
       await updateDoc(doc(db, COLLECTION, id), { status, updatedAt: serverTimestamp() });
-      // Optimistic local update
       setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
       if (selected?.id === id) setSelected(prev => ({ ...prev, status }));
     } catch (e) {
@@ -110,11 +140,15 @@ export default function SupportPage() {
     setCreateBusy(true);
     try {
       await addDoc(collection(db, COLLECTION), {
-        ...form,
-        userId: null,
-        status: 'open',
-        responses: [],
-        createdAt: serverTimestamp(),
+        userId:        null,
+        email:         form.email,
+        subject:       form.subject,
+        status:        'open',
+        messages:      [{ sender: 'user', text: form.message, createdAt: new Date().toISOString() }],
+        unreadByAdmin: true,
+        unreadByUser:  false,
+        createdAt:     serverTimestamp(),
+        updatedAt:     serverTimestamp(),
       });
       setShowCreate(false);
       setForm({ email: '', subject: '', message: '', category: 'other' });
@@ -126,9 +160,10 @@ export default function SupportPage() {
   };
 
   // ── Derived data ──────────────────────────────────────────────────────────
-  const openCount     = tickets.filter(t => t.status === 'open').length;
-  const repliedCount  = tickets.filter(t => t.status === 'replied').length;
-  const closedCount   = tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length;
+  const openCount    = tickets.filter(t => t.status === 'open').length;
+  const repliedCount = tickets.filter(t => t.status === 'replied').length;
+  const closedCount  = tickets.filter(t => t.status === 'closed' || t.status === 'resolved').length;
+  const unreadCount  = tickets.filter(t => t.unreadByAdmin).length;
 
   const filtered = tickets.filter(t => {
     const q = search.toLowerCase();
@@ -148,6 +183,7 @@ export default function SupportPage() {
           <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Wifi style={{ width: 11, height: 11, color: '#10b981' }} />
             Live · {openCount} open · {repliedCount} replied · {closedCount} closed
+            {unreadCount > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '1px 7px', fontSize: '0.68rem', fontWeight: 700 }}>{unreadCount} unread</span>}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -161,12 +197,13 @@ export default function SupportPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {[
-          { label: 'Open',    value: openCount,       color: '#0369a1', bg: '#e0f2fe' },
-          { label: 'Replied', value: repliedCount,    color: '#6366f1', bg: '#ede9fe' },
-          { label: 'Closed',  value: closedCount,     color: '#64748b', bg: '#f1f5f9' },
-          { label: 'Total',   value: tickets.length,  color: '#0f172a', bg: '#fff'    },
+          { label: 'Open',     value: openCount,       color: '#0369a1', bg: '#e0f2fe' },
+          { label: 'Replied',  value: repliedCount,    color: '#6366f1', bg: '#ede9fe' },
+          { label: 'Closed',   value: closedCount,     color: '#64748b', bg: '#f1f5f9' },
+          { label: 'Unread',   value: unreadCount,     color: '#b45309', bg: '#fef3c7' },
+          { label: 'Total',    value: tickets.length,  color: '#0f172a', bg: '#fff'    },
         ].map(s => (
           <div key={s.label} className="a-card" style={{ padding: '0.875rem 1.1rem', background: s.bg }}>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
@@ -198,8 +235,8 @@ export default function SupportPage() {
         </div>
       )}
 
-      {/* Main grid: ticket list + reply panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: '1rem', alignItems: 'start' }}>
+      {/* Main grid: ticket list + thread panel */}
+      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 400px' : '1fr', gap: '1rem', alignItems: 'start' }}>
 
         {/* Ticket list */}
         <div className="a-card">
@@ -228,11 +265,14 @@ export default function SupportPage() {
                 {!loading && filtered.map(t => (
                   <tr
                     key={t.id}
-                    style={{ cursor: 'pointer', background: selected?.id === t.id ? '#f5f3ff' : undefined }}
+                    style={{ cursor: 'pointer', background: selected?.id === t.id ? '#f5f3ff' : t.unreadByAdmin ? '#fffbeb' : undefined }}
                     onClick={() => { setSelected(t); setReply(''); }}
                   >
                     <td style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>
-                      <div>{t.email || '—'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {t.unreadByAdmin && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', flexShrink: 0 }} />}
+                        {t.email || '—'}
+                      </div>
                       {t.userId && <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: 2 }}>uid: {t.userId.slice(0, 8)}…</div>}
                     </td>
                     <td style={{ fontSize: '0.82rem', color: '#475569', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -262,9 +302,10 @@ export default function SupportPage() {
           </div>
         </div>
 
-        {/* Reply / detail panel */}
+        {/* Thread panel */}
         {selected && (
-          <div className="a-card" style={{ display: 'flex', flexDirection: 'column', maxHeight: 620, position: 'sticky', top: 70 }}>
+          <div className="a-card" style={{ display: 'flex', flexDirection: 'column', maxHeight: 640, position: 'sticky', top: 70 }}>
+
             {/* Panel header */}
             <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexShrink: 0 }}>
               <div style={{ minWidth: 0 }}>
@@ -284,42 +325,36 @@ export default function SupportPage() {
             </div>
 
             {/* Message thread */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Original user message */}
-              <div style={{ background: '#f8fafc', borderRadius: 6, padding: '0.75rem', fontSize: '0.82rem', color: '#334155', lineHeight: 1.65 }}>
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  User Message
-                </div>
-                {selected.message || '(no message)'}
-              </div>
-
-              {/* Response history */}
-              {(selected.responses || []).map((r, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: r.from === 'admin' ? '#ede9fe' : '#f8fafc',
-                    borderRadius: 6,
-                    padding: '0.75rem',
-                    fontSize: '0.82rem',
-                    color: '#334155',
-                    lineHeight: 1.65,
-                    alignSelf: r.from === 'admin' ? 'flex-end' : 'flex-start',
-                    maxWidth: '90%',
-                  }}
-                >
-                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {r.from === 'admin' ? '🛡 Admin' : '👤 User'} · {r.at ? new Date(r.at).toLocaleString() : ''}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: 10, background: '#f8fafc' }}>
+              {selectedMessages.map((m, i) => {
+                const isAdmin = m.sender === 'admin';
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '88%', padding: '0.65rem 0.85rem',
+                      background: isAdmin ? '#ede9fe' : '#fff',
+                      borderRadius: isAdmin ? '14px 4px 14px 14px' : '4px 14px 14px 14px',
+                      fontSize: '0.82rem', color: '#334155', lineHeight: 1.65,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    }}>
+                      {m.text}
+                    </div>
+                    <div style={{ fontSize: '0.67rem', color: '#94a3b8', marginTop: 3, padding: '0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontWeight: 600, color: isAdmin ? '#6d28d9' : '#475569' }}>
+                        {isAdmin ? '🛡 Admin' : '👤 User'}
+                      </span>
+                      · {fmtIso(m.createdAt)}
+                    </div>
                   </div>
-                  {r.text}
-                </div>
-              ))}
+                );
+              })}
+              <div ref={bottomRef} />
             </div>
 
             {/* Reply input */}
             <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
               {selected.status === 'closed' || selected.status === 'resolved' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: '0.8rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: '0.8rem', flexWrap: 'wrap' }}>
                   <CheckCircle style={{ width: 14, height: 14, color: '#10b981' }} />
                   Ticket {selected.status}.
                   <button className="a-btn a-btn-ghost" style={{ padding: '3px 8px', fontSize: '0.72rem' }}
@@ -331,7 +366,7 @@ export default function SupportPage() {
                 <div style={{ display: 'flex', gap: 6 }}>
                   <textarea
                     className="a-textarea"
-                    style={{ flex: 1, resize: 'none', height: 64, fontSize: '0.82rem' }}
+                    style={{ flex: 1, resize: 'none', height: 72, fontSize: '0.82rem' }}
                     placeholder="Type a reply… (Ctrl+Enter to send)"
                     value={reply}
                     onChange={e => setReply(e.target.value)}
@@ -343,8 +378,9 @@ export default function SupportPage() {
                       style={{ padding: '6px 10px' }}
                       disabled={!reply.trim() || replyBusy}
                       onClick={sendReply}
+                      title="Send reply"
                     >
-                      <Send style={{ width: 13, height: 13 }} />
+                      {replyBusy ? <RefreshCw style={{ width: 13, height: 13 }} className="spin" /> : <Send style={{ width: 13, height: 13 }} />}
                     </button>
                     <button
                       className="a-btn a-btn-success"
@@ -358,6 +394,7 @@ export default function SupportPage() {
                       className="a-btn a-btn-ghost"
                       style={{ padding: '5px 10px', fontSize: '0.7rem' }}
                       onClick={() => updateStatus(selected.id, 'closed')}
+                      title="Close ticket"
                     >
                       Close
                     </button>
@@ -369,7 +406,7 @@ export default function SupportPage() {
         )}
       </div>
 
-      {/* Create ticket modal (admin-created tickets) */}
+      {/* Create ticket modal */}
       {showCreate && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div className="a-card" style={{ padding: '1.75rem', maxWidth: 440, width: '100%' }}>

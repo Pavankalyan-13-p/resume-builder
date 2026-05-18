@@ -1,7 +1,7 @@
 ﻿import React, { useState } from "react";
-import { X, Crown, LogOut, MessageCircle } from "lucide-react";
+import { X, Crown, LogOut, MessageCircle, Inbox } from "lucide-react";
 
-export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDeleteAccount, onContactSupport }) {
+export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDeleteAccount, onContactSupport, onMyTickets, unreadTickets = 0 }) {
   const [name, setName] = useState(user?.name || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -94,11 +94,25 @@ export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDele
 
           {/* Actions */}
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {onMyTickets && (
+              <button
+                onClick={onMyTickets}
+                style={{ padding: "10px 16px", background: unreadTickets > 0 ? "#f5f3ff" : "#f5f5f5", color: "#6d28d9", border: unreadTickets > 0 ? "1px solid #c4b5fd" : "1px solid #e0e0e0", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <Inbox style={{ width: 15, height: 15 }} />
+                My Support Tickets
+                {unreadTickets > 0 && (
+                  <span style={{ marginLeft: "auto", background: "#6d28d9", color: "#fff", borderRadius: 999, padding: "1px 7px", fontSize: "0.7rem", fontWeight: 700 }}>
+                    {unreadTickets}
+                  </span>
+                )}
+              </button>
+            )}
             <button
               onClick={onContactSupport}
               style={{ padding: "10px 16px", background: "#f5f5f5", color: "#1a2e4a", border: "1px solid #e0e0e0", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}
             >
-              <MessageCircle style={{ width: 15, height: 15 }} /> Contact Support
+              <MessageCircle style={{ width: 15, height: 15 }} /> New Support Ticket
             </button>
             <button
               onClick={onLogout}

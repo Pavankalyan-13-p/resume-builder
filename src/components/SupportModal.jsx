@@ -3,7 +3,7 @@ import { X, MessageCircle, Send, CheckCircle } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export default function SupportModal({ user, onClose }) {
+export default function SupportModal({ user, onClose, onViewTickets }) {
   const [subject, setSubject]     = useState('');
   const [message, setMessage]     = useState('');
   const [email, setEmail]         = useState(user?.email || '');
@@ -20,13 +20,20 @@ export default function SupportModal({ user, onClose }) {
     setError('');
     try {
       await addDoc(collection(db, 'supportTickets'), {
-        userId:    user?.uid  || null,
-        email:     email.trim(),
-        subject:   subject.trim(),
-        message:   message.trim(),
-        status:    'open',
-        responses: [],
-        createdAt: serverTimestamp(),
+        userId:       user?.uid || null,
+        email:        email.trim(),
+        subject:      subject.trim(),
+        status:       'open',
+        messages:     [{
+          sender:    'user',
+          text:      message.trim(),
+          createdAt: new Date().toISOString(),
+          senderName: user?.name || email.trim(),
+        }],
+        unreadByAdmin: true,
+        unreadByUser:  false,
+        createdAt:    serverTimestamp(),
+        updatedAt:    serverTimestamp(),
       });
       setSubmitted(true);
     } catch {
@@ -92,12 +99,22 @@ export default function SupportModal({ user, onClose }) {
                 We've received your message and will get back to you at{' '}
                 <strong style={{ color: '#1a2e4a' }}>{email}</strong> as soon as possible.
               </p>
-              <button
-                onClick={onClose}
-                style={{ padding: '10px 32px', background: '#1a2e4a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
-              >
-                Done
-              </button>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                {user && onViewTickets && (
+                  <button
+                    onClick={() => { onClose(); onViewTickets(); }}
+                    style={{ padding: '10px 20px', background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
+                  >
+                    View My Tickets
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  style={{ padding: '10px 32px', background: '#1a2e4a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }}
+                >
+                  Done
+                </button>
+              </div>
             </div>
           ) : (
             /* ── Form ── */

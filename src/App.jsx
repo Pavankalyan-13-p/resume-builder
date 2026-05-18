@@ -6,6 +6,8 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 import { useAuth } from "./contexts/AuthContext.jsx";
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from './firebase/config.js';
 import FirebaseAuthModal from "./components/auth/AuthModal.jsx";
 import { TEMPLATES } from "./data/resumeData.js";
 import HomePage from "./components/HomePage.jsx";
@@ -17,6 +19,7 @@ import Toast from "./components/Toast.jsx";
 import PdfLoadingModal from "./components/PdfLoadingModal.jsx";
 import MyResumesModal from "./components/MyResumesModal.jsx";
 import SupportModal from "./components/SupportModal.jsx";
+import MyTicketsModal from "./components/MyTicketsModal.jsx";
 
 // ========== LOCAL STORAGE HELPERS ==========
 // ========== LOCAL STORAGE HELPERS (fallback for anonymous users) ==========
@@ -718,6 +721,8 @@ export default function App() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [myResumesOpen, setMyResumesOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [ticketsOpen, setTicketsOpen] = useState(false);
+  const [unreadTickets, setUnreadTickets] = useState(0);
   const [userResumes, setUserResumes] = useState([]);
   const [resumesLoading, setResumesLoading] = useState(false);
   const [activeResumeId, setActiveResumeId] = useState(() => lsGet("rb_resume_id") || null);
@@ -735,6 +740,14 @@ export default function App() {
   const [atsOpen, setAtsOpen] = useState(false);
   const [appReady, setAppReady] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // -- Unread support ticket badge --
+  useEffect(() => {
+    if (!currentUser?.uid) { setUnreadTickets(0); return; }
+    const q = query(collection(db, 'supportTickets'), where('userId', '==', currentUser.uid), where('unreadByUser', '==', true));
+    const unsub = onSnapshot(q, snap => setUnreadTickets(snap.size), () => {});
+    return unsub;
+  }, [currentUser?.uid]);
 
   // -- Sync from cloud once auth resolves --
   useEffect(() => {
@@ -1087,9 +1100,10 @@ export default function App() {
         {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         {authModal && <FirebaseAuthModal mode={authModal} onClose={() => setAuthModal(null)} onSwitch={(m)=>setAuthModal(m)} onSuccess={(msg) => { setAuthModal(null); showToast(msg); }} />}
         {upgradeModal && <UpgradeModal onClose={() => setUpgradeModal(false)} onUpgrade={handleUpgrade} user={user} plan={upgradeModal} />}
-        {profileOpen && <ProfileModal user={user} onClose={() => setProfileOpen(false)} onUpdate={handleUpdateProfile} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onContactSupport={() => { setProfileOpen(false); setSupportOpen(true); }} />}
+        {profileOpen && <ProfileModal user={user} onClose={() => setProfileOpen(false)} onUpdate={handleUpdateProfile} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onContactSupport={() => { setProfileOpen(false); setSupportOpen(true); }} onMyTickets={() => { setProfileOpen(false); setTicketsOpen(true); }} unreadTickets={unreadTickets} />}
         {importOpen && <ImportResumeModal onClose={() => setImportOpen(false)} onImport={handleImportResume} user={user} onUpgrade={() => { setImportOpen(false); user ? setUpgradeModal('monthly') : setAuthModal("signup"); }} />}
-        {supportOpen && <SupportModal user={user} onClose={() => setSupportOpen(false)} />}
+        {supportOpen && <SupportModal user={user} onClose={() => setSupportOpen(false)} onViewTickets={user ? () => setTicketsOpen(true) : undefined} />}
+        {ticketsOpen && <MyTicketsModal user={user} onClose={() => setTicketsOpen(false)} onNewTicket={() => { setTicketsOpen(false); setSupportOpen(true); }} />}
       </div>
     </>
   );
