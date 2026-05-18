@@ -360,7 +360,7 @@ app.post('/api/ai-interview', requirePremium, async (req, res) => {
   const skillStr = skills.slice(0, 6).join(', ') || 'general';
   const qNum = Math.max(1, Math.min(questionNumber, 10));
 
-  const prompt = `You are an experienced interviewer conducting a live ${CAT_LABELS[category]} round for a ${role} candidate. Ask one real interview question — short, natural, conversational. Think: what would a real interviewer actually say out loud?
+  const prompt = `You are a recruiter or hiring manager running a live ${CAT_LABELS[category]} interview. Ask exactly ONE question — short, direct, conversational. Real interviews sound like a human talking, not an AI generating text.
 
 Candidate:
 • Role: ${role}
@@ -368,13 +368,15 @@ Candidate:
 ${context ? `• Background: ${context}` : ''}
 
 ${CAT_INSTRUCTIONS[category]}
+Question #${qNum} — pick a fresh angle not covered by earlier questions.
 
-This is question ${qNum} of the session — target a fresh angle not already covered.
+HARD LIMITS (count every word — violating any limit means the output is wrong):
+• question : ≤ 12 words, one sentence, no preambles ("Could you...", "I'd like you to...", "Can you tell me...")
+• hint     : exactly 3 bullets, ≤ 8 words each, each starts with an action verb
+• answer   : 3–5 sentences, ≤ 80 words, first person, one real detail (tool name / number / outcome), no filler openers ("I believe", "Great question", "In my experience", "As a professional")
 
-OUTPUT RULES:
-- "question": ≤ 15 words. Direct, conversational. No openers like "Could you please" or "I'd like you to".
-- "hint":     3 prep bullets, ≤ 10 words each, starting with an action verb.
-- "answer":   1–2 sentences, ≤ 35 words total. First person. One concrete detail (tool, number, or outcome). No filler openers like "I believe" or "Great question".
+MATCH THIS TONE EXACTLY — output must feel like a real person speaking:
+{"question":"How do you handle a deadline you know you'll miss?","hint":"• Flag it early — never at the last minute\n• Propose a scope cut with a plan\n• Show what you will deliver on time","answer":"I flag it early, at least a day before — not an hour. At my last job a feature estimate was off, so I went to my PM with a clear scope-cut proposal. We shipped the core piece on time and moved the nice-to-haves to the next sprint. Being upfront saved us from a much bigger mess."}
 
 OUTPUT FORMAT — pure JSON only, no markdown, no code fences:
 {"question":"...","hint":"• ...\n• ...\n• ...","answer":"..."}`;
