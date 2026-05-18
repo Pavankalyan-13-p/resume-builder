@@ -25,12 +25,12 @@ async function getAuthHeader() {
   }
 }
 
-export async function fetchInterviewQuestion({ category, role, skills = [], context = '' }) {
+export async function fetchInterviewQuestion({ category, role, skills = [], context = '', questionNumber = 1 }) {
   const headers = { 'Content-Type': 'application/json', ...await getAuthHeader() };
   const res = await fetch(`${SERVER}/api/ai-interview`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ category, role, skills, context }),
+    body: JSON.stringify({ category, role, skills, context, questionNumber }),
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 403) {

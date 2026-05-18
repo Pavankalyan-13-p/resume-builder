@@ -5,19 +5,21 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import './index.css';
 
 const path = window.location.pathname;
-const isAdmin   = path.startsWith('/admin');
-const isPrivacy = path.startsWith('/privacy');
-const isTerms   = path.startsWith('/terms');
-const isRefund  = path.startsWith('/refund');
+const isAdmin     = path.startsWith('/admin');
+const isPrivacy   = path.startsWith('/privacy');
+const isTerms     = path.startsWith('/terms');
+const isRefund    = path.startsWith('/refund');
+const isInterview = path.startsWith('/interview');
 
 // Lazy-load the admin bundle so it doesn't bloat the main app
 const AdminApp = isAdmin ? React.lazy(() => import('./admin/AdminApp.jsx')) : null;
 
-// Legal pages are small — import directly (no need for lazy loading)
 let LegalPage = null;
-if (isPrivacy) LegalPage = React.lazy(() => import('./pages/PrivacyPolicy.jsx'));
-else if (isTerms)  LegalPage = React.lazy(() => import('./pages/TermsAndConditions.jsx'));
-else if (isRefund) LegalPage = React.lazy(() => import('./pages/RefundPolicy.jsx'));
+if (isPrivacy)   LegalPage = React.lazy(() => import('./pages/PrivacyPolicy.jsx'));
+else if (isTerms)     LegalPage = React.lazy(() => import('./pages/TermsAndConditions.jsx'));
+else if (isRefund)    LegalPage = React.lazy(() => import('./pages/RefundPolicy.jsx'));
+
+const InterviewPage = isInterview ? React.lazy(() => import('./pages/InterviewPage.jsx')) : null;
 
 const isLegal = isPrivacy || isTerms || isRefund;
 
@@ -37,6 +39,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           </div>
         }>
           <AdminApp />
+        </React.Suspense>
+      ) : isInterview ? (
+        <React.Suspense fallback={
+          <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a' }}>
+            <div style={{ color:'#64748b', fontFamily:'system-ui', fontSize:'0.9rem' }}>Loading…</div>
+          </div>
+        }>
+          <InterviewPage />
         </React.Suspense>
       ) : isLegal ? (
         <React.Suspense fallback={legalFallback}>

@@ -317,11 +317,34 @@ Rules:
 
 // ── POST /api/ai-interview ────────────────────────────────────────────────────
 const CAT_LABELS = {
-  hr:           'HR & Behavioural',
+  hr:           'HR & Personal',
   technical:    'Technical',
   roleSpecific: 'Role-Specific',
   projects:     'Project-Based',
-  situational:  'Situational (STAR method)',
+  situational:  'Situational / Behavioural',
+};
+
+// Per-category coaching so the AI stays focused and varied
+const CAT_INSTRUCTIONS = {
+  hr: `Focus: personal fit, motivation, career goals, work style.
+Rotate across: self-introduction variation, why this role/company, career goals, handling feedback, strengths, professional growth, team preferences.
+Q1: use a self-intro style. Later Qs: shift to motivation or goals. Never repeat the same angle.`,
+
+  technical: `Focus: hands-on technical knowledge specific to the candidate's skill set.
+Ask about a real scenario — trade-offs, debugging, architecture, or practical usage of a tool they listed.
+Avoid textbook definitions. Frame it as "How would you..." or "Walk me through...".`,
+
+  roleSpecific: `Focus: expertise unique to this exact job title.
+Ask something only a practitioner in this role would handle confidently — role-specific workflows, decisions, or best practices.
+Avoid generic questions that apply to any developer or professional.`,
+
+  projects: `Focus: one of the candidate's listed projects.
+Ask about decisions made, technical challenges, what they'd change in hindsight, or measurable impact.
+Keep it conversational: "Walk me through..." or "What was the hardest part of...".`,
+
+  situational: `Focus: behavioural / STAR-method scenarios.
+Use "Tell me about a time..." or "Give me an example of..." framing.
+Rotate across: handling conflict, tight deadlines, recovering from a mistake, cross-team collaboration, or stepping up without being asked.`,
 };
 
 app.post('/api/ai-interview', requirePremium, async (req, res) => {
@@ -330,19 +353,30 @@ app.post('/api/ai-interview', requirePremium, async (req, res) => {
   if (!rateLimit(getIp(req), 20))
     return res.status(429).json({ error: 'Rate limit reached. Try again in a minute.' });
 
-  const { category = 'hr', role = 'Professional', skills = [], context = '' } = req.body;
+  const { category = 'hr', role = 'Professional', skills = [], context = '', questionNumber = 1 } = req.body;
   if (!CAT_LABELS[category])
     return res.status(400).json({ error: `Invalid category. Use: ${Object.keys(CAT_LABELS).join(', ')}` });
 
-  const prompt = `You are a senior interviewer running a ${CAT_LABELS[category]} round for a ${role} position.
+  const skillStr = skills.slice(0, 6).join(', ') || 'general';
+  const qNum = Math.max(1, Math.min(questionNumber, 10));
+
+  const prompt = `You are a senior interviewer at a tech company running the ${CAT_LABELS[category]} round for a ${role} candidate.
 
 Candidate:
-- Skills: ${skills.slice(0, 6).join(', ') || 'not specified'}
-${context ? `- Background: ${context}` : ''}
+• Role: ${role}
+• Skills: ${skillStr}
+${context ? `• Background: ${context}` : ''}
 
-Generate ONE realistic ${CAT_LABELS[category]} interview question for this candidate.
-Respond with pure JSON only — no markdown, no code fences, no extra text:
-{"question":"<the interview question>","hint":"<2-3 specific answer strategy points the candidate should cover>","answer":"<a strong 2-3 sentence sample professional answer>"}`;
+${CAT_INSTRUCTIONS[category]}
+
+This is question ${qNum} of the session — make sure it targets a different angle than earlier questions would cover.
+
+OUTPUT FORMAT — pure JSON only, no markdown, no code fences:
+{
+  "question": "<single clear interview question, ≤ 25 words, realistic and specific>",
+  "hint": "• <point 1, ≤ 12 words>\n• <point 2, ≤ 12 words>\n• <point 3, ≤ 12 words>",
+  "answer": "<2–3 sentences in first person, professional, specific — mention tools or numbers where natural. No filler phrases.>"
+}`;
 
   try {
     const result = await gemini.generateContent(prompt);

@@ -10,15 +10,15 @@ import Editor from "./Editor.jsx";
 import ATSModal from "./ATSModal.jsx";
 import JobSuggestionsModal from "./JobSuggestionsModal.jsx";
 import CoverLetterModal from "./CoverLetterGenerator.jsx";
-import InterviewSimulator from "./InterviewSimulator.jsx";
 export default function BuilderPage(props) {
   const { resume, setResume, templateId, onSelectTemplate, activeSection, setActiveSection, saveStatus, ats, atsOpen, setAtsOpen, user, onBackHome, onPDF, onWord, onSignIn, onSignUp, onLogout, onUpgrade, sidebarOpen, setSidebarOpen, onOpenProfile, onOpenImport, onOpenMyResumes, downloadsRemaining, isPreviewLocked, isPdfLoading } = props;
   const Template = TEMPLATE_COMPONENTS[templateId] || TEMPLATE_COMPONENTS["classic"];
   const [mobileTab, setMobileTab]         = useState("edit");
   const [jobModal, setJobModal]           = useState(false);
   const [clModal, setClModal]             = useState(false);
-  const [interviewModal, setInterviewModal] = useState(false);
   const [wordTip, setWordTip]             = useState(false);
+
+  const openInterviewSimulator = () => window.open('/interview', '_blank');
 
   useEffect(() => {
     if (!wordTip) return;
@@ -38,7 +38,7 @@ export default function BuilderPage(props) {
     { id: "certifications", label: "Certs", icon: <Award style={{ width: 14, height: 14 }} /> },
     { id: "templates", label: "Templates", icon: <FileText style={{ width: 14, height: 14 }} /> },
     { id: "_cover-letter", label: "Cover Letter", icon: <Edit3 style={{ width: 14, height: 14, color: "#b84a2e" }} />, modal: () => setClModal(true) },
-    { id: "_interview",    label: "Simulator",    icon: <Star style={{ width: 14, height: 14, color: "#6d28d9" }} />, modal: () => setInterviewModal(true) },
+    { id: "_interview",    label: "Simulator",    icon: <Star style={{ width: 14, height: 14, color: "#6d28d9" }} />, modal: () => openInterviewSimulator() },
   ];
 
   const atsColor = ats.score >= 80 ? "#15803d" : ats.score >= 60 ? "#d97706" : "#dc2626";
@@ -110,7 +110,7 @@ export default function BuilderPage(props) {
           </button>
           <button
             className="bldr-interview"
-            onClick={() => setInterviewModal(true)}
+            onClick={() => openInterviewSimulator()}
             title="Interview Simulator — Premium feature"
             style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", border: "1px solid #e5e5e5", background: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, color: "#555", position: "relative", whiteSpace: "nowrap" }}
           >
@@ -278,7 +278,7 @@ export default function BuilderPage(props) {
           {!user && <Lock style={{ width: 8, height: 8, color: "#888", position: "absolute", top: 5, right: "calc(50% - 12px)" }} />}
           Cover
         </button>
-        <button onClick={() => setInterviewModal(true)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "none", cursor: "pointer", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#888", position: "relative" }}>
+        <button onClick={() => openInterviewSimulator()} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px", border: "none", background: "none", cursor: "pointer", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#888", position: "relative" }}>
           <Star style={{ width: 16, height: 16 }} />
           {(!user || user.plan !== "pro") && <Crown style={{ width: 8, height: 8, color: "#b84a2e", position: "absolute", top: 5, right: "calc(50% - 12px)" }} />}
           Interview
@@ -296,7 +296,6 @@ export default function BuilderPage(props) {
       {atsOpen && <ATSModal ats={ats} onClose={() => setAtsOpen(false)} />}
       {jobModal && <JobSuggestionsModal resume={resume} user={user} onClose={() => setJobModal(false)} onUpgrade={onUpgrade} />}
       {clModal && <CoverLetterModal resume={resume} user={user} onClose={() => setClModal(false)} onUpgrade={onUpgrade} />}
-      {interviewModal && <InterviewSimulator resume={resume} user={user} onClose={() => setInterviewModal(false)} onUpgrade={onUpgrade} />}
     </div>
   );
 }

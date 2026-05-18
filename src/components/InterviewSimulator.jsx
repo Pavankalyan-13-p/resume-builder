@@ -27,7 +27,7 @@ const IS_CSS = `
   @media(max-width:520px){.is-cat-grid{grid-template-columns:1fr;}.is-full{grid-column:span 1;}.is-intro,.is-select,.is-done{padding:1.5rem 1rem;}}
 `;
 
-const MAX_QS = 8;
+const CAT_Q_COUNTS = { hr: 5, technical: 8, roleSpecific: 5, projects: 4, situational: 4 };
 
 const CATS = [
   { id:'hr',           label:'HR & Personal',  emoji:'\u{1F464}', color:'#3b82f6', desc:'Walk-ins, strengths & career goals' },
@@ -88,14 +88,14 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
   const isPro = user?.plan === 'pro';
 
   const catInfo  = CATS.find(c => c.id === category) || CATS[0];
-  const total    = MAX_QS;
+  const total    = category ? (CAT_Q_COUNTS[category] ?? 5) : 5;
   const scorePct = Math.round((nailedCount / total) * 100);
   const progPct  = (qIdx / total) * 100;
   const role     = resume?.personal?.title || '';
   const skills   = resume?.skills || [];
 
   // Load a question from the AI backend
-  const loadQuestion = async (catId) => {
+  const loadQuestion = async (catId, qNumber = 1) => {
     setIsLoading(true);
     setLoadError(null);
     setCurrentQ(null);
@@ -106,6 +106,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
         role: resume?.personal?.title || 'Professional',
         skills: resume?.skills || [],
         context: buildContext(resume),
+        questionNumber: qNumber,
       });
       setCurrentQ(q);
     } catch (err) {
@@ -138,12 +139,12 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
   }, [currentQ, phase]);
 
   const next = () => {
-    if (qIdx + 1 >= MAX_QS) {
+    const nextIdx = qIdx + 1;
+    if (nextIdx >= total) {
       setPhase('done');
     } else {
-      const nextIdx = qIdx + 1;
       setQIdx(nextIdx);
-      loadQuestion(category);
+      loadQuestion(category, nextIdx + 1);
     }
   };
 
@@ -163,7 +164,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
     setCurrentQ(null);
     setLoadError(null);
     setPhase('practice');
-    loadQuestion(id);
+    loadQuestion(id, 1);
   };
 
   const goSelect = () => { setPhase('select'); setCurrentQ(null); setLoadError(null); };
@@ -247,7 +248,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(184,74,46,0.4)'; }}>
               Start Practice Session &rarr;
             </button>
-            <p style={{ color:'#334155', fontSize:'0.73rem', marginTop:'0.75rem' }}>Resume-personalised &middot; {MAX_QS} questions per round &middot; No time limit</p>
+            <p style={{ color:'#334155', fontSize:'0.73rem', marginTop:'0.75rem' }}>Resume-personalised &middot; 4–8 questions per round &middot; No time limit</p>
           </div>
         )}
 
@@ -271,7 +272,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                   <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
                     <span style={{ fontSize:'1.5rem', lineHeight:1 }}>{cat.emoji}</span>
                     <span style={{ fontSize:'0.62rem', background:cat.color+'22', color:cat.color, padding:'2px 8px', borderRadius:99, fontWeight:700 }}>
-                      {isPro ? `${MAX_QS} Qs` : '🔒 Pro'}
+                      {isPro ? `${CAT_Q_COUNTS[cat.id]} Qs` : '🔒 Pro'}
                     </span>
                   </div>
                   <div style={{ color:'#f1f5f9', fontWeight:700, fontSize:'0.9rem', marginBottom:3 }}>{cat.label}</div>
@@ -312,7 +313,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                 <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, padding:'0.5rem 0' }}>
                   <p style={{ color:'#f87171', fontSize:'0.85rem', margin:0, textAlign:'center' }}>{loadError}</p>
                   <button
-                    onClick={() => loadQuestion(category)}
+                    onClick={() => loadQuestion(category, qIdx + 1)}
                     style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 16px', background:'#b84a2e', border:'none', color:'#fff', fontWeight:600, fontSize:'0.78rem', cursor:'pointer', borderRadius:6, fontFamily:'inherit' }}>
                     <RefreshCw style={{ width:12, height:12 }} /> Try Again
                   </button>
@@ -336,7 +337,7 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                     {/* Answer Strategy */}
                     <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:8, padding:'1rem 1.25rem', marginBottom:8 }}>
                       <div style={{ fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.13em', fontWeight:700, color:'#b45309', marginBottom:5 }}>Answer Strategy</div>
-                      <p style={{ color:'#1e293b', fontSize:'0.84rem', lineHeight:1.65, margin:0 }}>{currentQ.hint}</p>
+                      <p style={{ color:'#1e293b', fontSize:'0.84rem', lineHeight:1.65, margin:0, whiteSpace:'pre-wrap' }}>{currentQ.hint}</p>
                     </div>
 
                     {/* Sample Answer */}
