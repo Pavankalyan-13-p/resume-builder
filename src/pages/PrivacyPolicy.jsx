@@ -163,8 +163,8 @@ export default function PrivacyPolicy() {
         <LP>
           If you have any questions or concerns about this Privacy Policy or how your data is handled, please
           contact us at:{" "}
-          <a href="mailto:support@foliant.app" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
-            support@foliant.app
+          <a href="mailto:foliantai@gmail.com" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
+            foliantai@gmail.com
           </a>
         </LP>
       </LegalSection>

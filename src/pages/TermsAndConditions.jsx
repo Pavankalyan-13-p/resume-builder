@@ -47,8 +47,8 @@ export default function TermsAndConditions() {
         </LP>
         <LP>
           Notify us immediately at{" "}
-          <a href="mailto:support@foliant.app" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
-            support@foliant.app
+          <a href="mailto:foliantai@gmail.com" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
+            foliantai@gmail.com
           </a>{" "}
           if you suspect unauthorised access to your account.
         </LP>
@@ -178,8 +178,8 @@ export default function TermsAndConditions() {
       <LegalSection title="13. Contact Us">
         <LP>
           For questions about these Terms, contact us at:{" "}
-          <a href="mailto:support@foliant.app" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
-            support@foliant.app
+          <a href="mailto:foliantai@gmail.com" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
+            foliantai@gmail.com
           </a>
         </LP>
       </LegalSection>

@@ -68,7 +68,7 @@ export default function RefundPolicy() {
         </LP>
         <LegalList items={[
           "Refresh the page and sign out, then sign back in.",
-          "If the issue persists, contact us at support@foliant.app with your Razorpay Payment ID.",
+          "If the issue persists, contact us at foliantai@gmail.com with your Razorpay Payment ID.",
           "We will manually activate your Pro access within 24 hours of receiving your message.",
         ]} />
         <LP>
@@ -80,8 +80,8 @@ export default function RefundPolicy() {
       <LegalSection title="6. How to Request a Refund">
         <LP>To request a refund, email us at:</LP>
         <LP>
-          <a href="mailto:support@foliant.app" style={{ color: "#1a2e4a", textDecoration: "underline", fontWeight: 600 }}>
-            support@foliant.app
+          <a href="mailto:foliantai@gmail.com" style={{ color: "#1a2e4a", textDecoration: "underline", fontWeight: 600 }}>
+            foliantai@gmail.com
           </a>
         </LP>
         <LP>Please include the following in your email:</LP>
@@ -125,8 +125,8 @@ export default function RefundPolicy() {
       <LegalSection title="9. Contact">
         <LP>
           If you have any questions about this Refund Policy, please reach out to us at{" "}
-          <a href="mailto:support@foliant.app" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
-            support@foliant.app
+          <a href="mailto:foliantai@gmail.com" style={{ color: "#1a2e4a", textDecoration: "underline" }}>
+            foliantai@gmail.com
           </a>
           . We are committed to resolving payment issues quickly and fairly.
         </LP>
