@@ -86,6 +86,13 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
           <a href="#features" className="hp-nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
           <a href="#templates" className="hp-nav-link" onClick={() => setMobileMenuOpen(false)}>Templates</a>
           <a href="#pricing" className="hp-nav-link" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+          <button
+            onClick={() => { onContactSupport(); setMobileMenuOpen(false); }}
+            className="hp-nav-link"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: '0.875rem' }}
+          >
+            Support
+          </button>
           {mobileMenuOpen && (
             <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: "0.75rem", marginTop: "0.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {user ? (
@@ -99,6 +106,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
                   <button onClick={() => { onSignUp(); setMobileMenuOpen(false); }} style={{ background: "#1a2e4a", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, padding: "10px 16px", textAlign: "center" }}>Get started - free</button>
                 </>
               )}
+              <button onClick={() => { onContactSupport(); setMobileMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.875rem", color: "#666", textAlign: "left", padding: 0 }}>Contact Support</button>
             </div>
           )}
         </div>

@@ -61,9 +61,17 @@ export default function SupportModal({ user, onClose }) {
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <MessageCircle style={{ width: 20, height: 20, color: '#1a2e4a' }} />
+            <div>
             <h2 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: '1.35rem', fontWeight: 700, color: '#1a2e4a', margin: 0 }}>
               Contact Support
             </h2>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+              to:{' '}
+              <a href="mailto:foliantai@gmail.com" style={{ color: '#1a2e4a', textDecoration: 'none', fontWeight: 600 }}>
+                foliantai@gmail.com
+              </a>
+            </div>
+          </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
             <X style={{ width: 18, height: 18, color: '#888' }} />
