@@ -140,7 +140,7 @@ export default function UsersPage() {
                       {u.isPremium ? '★ Pro' : 'Free'}
                     </span>
                   </td>
-                  <td style={{ fontWeight:600, color:'#1e293b' }}>{u.downloadCount || 0}<span style={{ color:'#94a3b8', fontWeight:400 }}>/5</span></td>
+                  <td style={{ fontWeight:600, color:'#1e293b' }}>{u.downloadCount || 0}<span style={{ color:'#94a3b8', fontWeight:400 }}>/{u.role === 'admin' ? '∞' : u.isPremium ? '10' : '3'}</span></td>
                   <td style={{ color:'#64748b', fontSize:'0.8rem' }}>{fmt(u.createdAt)}</td>
                   <td>
                     <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>

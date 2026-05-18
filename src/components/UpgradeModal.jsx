@@ -276,13 +276,13 @@ export default function UpgradeModal({ onClose, onUpgrade, user, plan }) {
                 "All 10 premium templates (15 total)",
                 "Personalized Job Matches",
                 "Cover Letter Generator (PDF download)",
-                "Unlimited PDF & Word exports",
+                "Up to 10 PDF & Word exports/day",
                 "All future features + Priority Support",
               ] : [
                 "All 10 premium templates (15 total)",
                 "Personalized Job Matches",
                 "Cover Letter Generator (PDF download)",
-                "Unlimited PDF & Word exports",
+                "Up to 10 PDF & Word exports/day",
                 "Priority Support + all future features",
               ]).map(f => (
                 <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.83rem", color: "#333" }}>

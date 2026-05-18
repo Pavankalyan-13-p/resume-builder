@@ -625,7 +625,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem 0", display: "flex", flexDirection: "column", gap: "10px" }}>
                 {[
                   "5 free templates (Classic, Modern, Simple ATS, Sleek, Canvas)",
-                  "PDF & Word (.docx) downloads",
+                  "PDF & Word (.docx) downloads (3/day)",
                   "ATS Score Checker",
                   "Resume Preview",
                   "Job Role Suggestions Preview",
@@ -660,7 +660,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
                   "AI Resume Summary Generator",
                   "Personalized Job Matches",
                   "AI Interview Simulator — 5 rounds, 26 AI questions",
-                  "Unlimited PDF exports",
+                  "Up to 10 PDF & Word exports/day",
                   "Priority Support + all future features",
                 ].map(f => (
                   <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "0.875rem", color: "#333", lineHeight: 1.4 }}>

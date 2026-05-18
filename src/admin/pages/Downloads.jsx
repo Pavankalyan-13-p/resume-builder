@@ -43,13 +43,16 @@ export default function DownloadsPage() {
   };
 
   const totalDownloads = users.reduce((s, u) => s + (u.downloadCount || 0), 0);
-  const atLimit = users.filter(u => !u.isPremium && (u.downloadCount || 0) >= 5).length;
+  const FREE_LIMIT = 3;
+  const PRO_LIMIT  = 10;
+  const userLimit  = (u) => u.role === 'admin' ? Infinity : u.isPremium ? PRO_LIMIT : FREE_LIMIT;
+  const atLimit = users.filter(u => !u.isPremium && u.role !== 'admin' && (u.downloadCount || 0) >= FREE_LIMIT).length;
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     const matchQ = !q || u.email?.toLowerCase().includes(q) || u.displayName?.toLowerCase().includes(q);
     const matchF = filter === 'all'
-      || (filter === 'limit' ? !u.isPremium && (u.downloadCount || 0) >= 5
+      || (filter === 'limit' ? !u.isPremium && u.role !== 'admin' && (u.downloadCount || 0) >= FREE_LIMIT
       : filter === 'premium' ? u.isPremium
       : true);
     return matchQ && matchF;
@@ -76,8 +79,8 @@ export default function DownloadsPage() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'0.75rem', marginBottom:'1.25rem' }}>
         {[
           { label:'Total Downloads', value: totalDownloads, color:'#6366f1' },
-          { label:'At Free Limit (5/5)', value: atLimit, color:'#dc2626' },
-          { label:'Premium (unlimited)', value: users.filter(u=>u.isPremium).length, color:'#f59e0b' },
+          { label:'At Free Limit (3/3)', value: atLimit, color:'#dc2626' },
+          { label:'Pro Users (10/day)',  value: users.filter(u=>u.isPremium).length, color:'#f59e0b' },
           { label:'Avg Downloads/User', value: users.length ? (totalDownloads/users.length).toFixed(1) : '0', color:'#10b981' },
         ].map(s => (
           <div key={s.label} className="a-card" style={{ padding:'0.875rem 1.1rem' }}>
@@ -96,7 +99,7 @@ export default function DownloadsPage() {
         </div>
         <select className="a-select" value={filter} onChange={e => setFilter(e.target.value)}>
           <option value="all">All Users</option>
-          <option value="limit">At Limit (5/5)</option>
+          <option value="limit">At Free Limit (3/3)</option>
           <option value="premium">Premium</option>
         </select>
       </div>
@@ -127,8 +130,9 @@ export default function DownloadsPage() {
               )}
               {!loading && filtered.map(u => {
                 const count = u.downloadCount || 0;
-                const isAtLimit = !u.isPremium && count >= 5;
-                const p = u.isPremium ? 100 : pct(count, 5);
+                const lim = userLimit(u);
+                const isAtLimit = lim !== Infinity && count >= lim;
+                const p = lim === Infinity ? 0 : pct(count, lim);
                 const barColor = u.isPremium ? '#f59e0b' : isAtLimit ? '#dc2626' : p > 60 ? '#f59e0b' : '#10b981';
                 return (
                   <tr key={u.id}>
@@ -143,19 +147,19 @@ export default function DownloadsPage() {
                     </td>
                     <td>
                       <span style={{ fontWeight:700, color: isAtLimit ? '#dc2626' : '#1e293b' }}>{count}</span>
-                      {!u.isPremium && <span style={{ color:'#94a3b8', fontSize:'0.78rem' }}>/5</span>}
-                      {u.isPremium && <span style={{ color:'#94a3b8', fontSize:'0.78rem' }}> (∞)</span>}
+                      {lim !== Infinity && <span style={{ color:'#94a3b8', fontSize:'0.78rem' }}>/{lim}</span>}
+                      {lim === Infinity && <span style={{ color:'#94a3b8', fontSize:'0.78rem' }}> (∞)</span>}
                       {isAtLimit && <span className="bdg bdg-err" style={{ marginLeft:6 }}>Limit</span>}
                     </td>
                     <td style={{ minWidth:120 }}>
-                      {u.isPremium ? (
-                        <div style={{ fontSize:'0.72rem', color:'#f59e0b', fontWeight:600 }}>Unlimited</div>
+                      {lim === Infinity ? (
+                        <div style={{ fontSize:'0.72rem', color:'#94a3b8', fontWeight:600 }}>Admin — no limit</div>
                       ) : (
                         <div>
                           <div style={{ height:6, background:'#f1f5f9', borderRadius:99, overflow:'hidden' }}>
                             <div style={{ height:'100%', width:`${p}%`, background:barColor, borderRadius:99, transition:'width 0.3s' }} />
                           </div>
-                          <div style={{ fontSize:'0.65rem', color:'#94a3b8', marginTop:2 }}>{count}/5 used</div>
+                          <div style={{ fontSize:'0.65rem', color:'#94a3b8', marginTop:2 }}>{count}/{lim} used</div>
                         </div>
                       )}
                     </td>

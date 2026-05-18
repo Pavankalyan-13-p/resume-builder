@@ -939,15 +939,23 @@ export default function App() {
   // Compute daily remaining for the counter shown in the builder UI
   const today = new Date().toISOString().slice(0, 10);
   const dailyCount = userDoc?.lastDownloadDate === today ? (userDoc?.downloadCount || 0) : 0;
-  const downloadsRemaining = effectivePremium ? Infinity : Math.max(0, 5 - dailyCount);
+  const downloadsRemaining = isAdminUser
+    ? Infinity
+    : isPremium
+      ? Math.max(0, 10 - dailyCount)
+      : Math.max(0, 3 - dailyCount);
 
   const handlePDFDownload = async () => {
     if (pdfGenerating) return;
     if (isPreviewLocked) { setUpgradeModal('monthly'); return; }
     // Gate check — read from already-loaded userDoc, no Firestore write yet
-    if (currentUser && !effectivePremium && downloadsRemaining <= 0) {
-      showToast("Daily limit reached — 5 downloads/day on the free plan. Upgrade to Pro for unlimited.", "error");
-      setUpgradeModal('monthly');
+    if (currentUser && !isAdminUser && downloadsRemaining <= 0) {
+      if (isPremium) {
+        showToast("Daily limit reached — Pro plan allows 10 downloads/day. Resets at midnight (UTC).", "error");
+      } else {
+        showToast("Daily limit reached — 3 downloads/day on the free plan. Upgrade to Pro for 10/day.", "error");
+        setUpgradeModal('monthly');
+      }
       return;
     }
     setPdfGenerating(true);
@@ -955,7 +963,7 @@ export default function App() {
       await exportPDF(resume);
       // Increment quota ONLY after the PDF was successfully received by the browser
       const { remaining } = await trackDownload();
-      if (currentUser && !effectivePremium && remaining <= 1) {
+      if (currentUser && !isAdminUser && remaining <= 1) {
         showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
       }
     } catch (err) {
@@ -969,16 +977,20 @@ export default function App() {
 
   const handleWordDownload = async () => {
     // Gate check — no Firestore write yet
-    if (currentUser && !effectivePremium && downloadsRemaining <= 0) {
-      showToast("Daily limit reached — 5 downloads/day on the free plan. Upgrade to Pro for unlimited.", "error");
-      setUpgradeModal('monthly');
+    if (currentUser && !isAdminUser && downloadsRemaining <= 0) {
+      if (isPremium) {
+        showToast("Daily limit reached — Pro plan allows 10 downloads/day. Resets at midnight (UTC).", "error");
+      } else {
+        showToast("Daily limit reached — 3 downloads/day on the free plan. Upgrade to Pro for 10/day.", "error");
+        setUpgradeModal('monthly');
+      }
       return;
     }
     try {
       await exportWord(resume, templateId);
       // Increment quota ONLY after the Word file was successfully generated
       const { remaining } = await trackDownload();
-      if (currentUser && !effectivePremium && remaining <= 1) {
+      if (currentUser && !isAdminUser && remaining <= 1) {
         showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
       }
     } catch {

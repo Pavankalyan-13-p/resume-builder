@@ -181,16 +181,22 @@ export function AuthProvider({ children }) {
     await deleteDoc(doc(db, 'users', currentUser.uid, 'resumes', resumeId));
   }, [currentUser]);
 
+  const DAILY_LIMIT_FREE = 3;
+  const DAILY_LIMIT_PRO  = 10;
+
   const trackDownload = useCallback(async () => {
     if (!currentUser) return { allowed: true, remaining: Infinity };
-    if (isActivePremium(userDoc) || userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
+    if (userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
 
     const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
     const lastDate = userDoc?.lastDownloadDate || "";
     // Reset count when the calendar date changes
     const dailyCount = lastDate === today ? (userDoc?.downloadCount || 0) : 0;
 
-    if (dailyCount >= 5) return { allowed: false, remaining: 0 };
+    const isPro = isActivePremium(userDoc);
+    const limit = isPro ? DAILY_LIMIT_PRO : DAILY_LIMIT_FREE;
+
+    if (dailyCount >= limit) return { allowed: false, remaining: 0 };
 
     const newCount = dailyCount + 1;
     // Optimistic local update so the UI counter reflects immediately
@@ -200,7 +206,7 @@ export function AuthProvider({ children }) {
       // Write exact value (not increment) so a day-reset is persisted correctly
       await setDoc(ref, { downloadCount: newCount, lastDownloadDate: today }, { merge: true });
     } catch (e) {}
-    return { allowed: true, remaining: 5 - newCount };
+    return { allowed: true, remaining: limit - newCount };
   }, [currentUser, userDoc]);
 
   // ── Auth state listener ────────────────────────────────────────────────
