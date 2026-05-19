@@ -1,7 +1,7 @@
 ﻿import React, { useState } from "react";
-import { X, Crown, LogOut, MessageCircle, Inbox } from "lucide-react";
+import { X, Crown, LogOut, MessageCircle, Inbox, Lightbulb } from "lucide-react";
 
-export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDeleteAccount, onContactSupport, onMyTickets, unreadTickets = 0 }) {
+export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDeleteAccount, onContactSupport, onMyTickets, onFeedback, unreadTickets = 0 }) {
   const [name, setName] = useState(user?.name || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -114,6 +114,14 @@ export default function ProfileModal({ user, onClose, onUpdate, onLogout, onDele
             >
               <MessageCircle style={{ width: 15, height: 15 }} /> New Support Ticket
             </button>
+            {onFeedback && (
+              <button
+                onClick={onFeedback}
+                style={{ padding: "10px 16px", background: "#fff8f6", color: "#b84a2e", border: "1px solid #fde0d6", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <Lightbulb style={{ width: 15, height: 15 }} /> Feedback &amp; Suggestions
+              </button>
+            )}
             <button
               onClick={onLogout}
               style={{ padding: "10px 16px", background: "#f5f5f5", color: "#333", border: "1px solid #e0e0e0", cursor: "pointer", fontSize: "0.875rem", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}

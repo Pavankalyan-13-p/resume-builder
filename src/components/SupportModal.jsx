@@ -36,8 +36,13 @@ export default function SupportModal({ user, onClose, onViewTickets }) {
         updatedAt:    serverTimestamp(),
       });
       setSubmitted(true);
-    } catch {
-      setError('Failed to submit ticket. Please try again.');
+    } catch (err) {
+      console.error('[support] Firestore write failed:', err.code, err.message);
+      setError(
+        err.code === 'permission-denied'
+          ? 'Permission denied — please refresh and try again.'
+          : 'Failed to submit ticket. Please try again.'
+      );
     }
     setSubmitting(false);
   };

@@ -1,9 +1,100 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read/write their own document
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
     }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Reads the caller's own user document to check the role field.
+    // No recursion risk: the users rule allows any owner to read their own doc,
+    // so the get() resolves via isOwner() without re-entering isAdmin().
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ── users/{userId} ────────────────────────────────────────────────────────
+    // Each user can read and update their own profile document.
+    // Admins can read or update any user document (e.g. granting premium).
+    // Only the owner or an admin may delete a user document.
+
+    match /users/{userId} {
+      allow read:   if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
+
+      // ── users/{userId}/resumes ─────────────────────────────────────────────
+      // Resume documents belong exclusively to the owner.
+
+      match /resumes/{resumeId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
+
+      // ── users/{userId}/interviewSessions ──────────────────────────────────
+      // Interview practice history is private to the owner.
+
+      match /interviewSessions/{sessionId} {
+        allow read, create, update: if isOwner(userId);
+      }
+    }
+
+    // ── supportTickets ────────────────────────────────────────────────────────
+    // Guest users may open a ticket without being signed in (userId stored as
+    // null). Authenticated users can read and reply to tickets they own.
+    // Admins have full access to all tickets.
+
+    match /supportTickets/{ticketId} {
+      allow create: if true;
+
+      allow read:   if isAdmin() ||
+                       (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow update: if isAdmin() ||
+                       (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow delete: if isAdmin();
+    }
+
+    // ── feedback ──────────────────────────────────────────────────────────────
+    // The feedback form is only reachable from the authenticated profile modal,
+    // so we require a signed-in user to submit. Admins manage all entries.
+
+    match /feedback/{feedbackId} {
+      allow create:               if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── payments ─────────────────────────────────────────────────────────────
+    // Authenticated users create a payment record at checkout and update its
+    // status during the Razorpay callback (matched by email). Admins can read
+    // and manage all payment records. No user-facing payment history view exists
+    // so regular users do not need list/read access.
+
+    match /payments/{paymentId} {
+      allow create: if isSignedIn();
+
+      allow update: if isSignedIn() &&
+                       resource.data.email == request.auth.token.email;
+
+      allow read:   if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── app_config ────────────────────────────────────────────────────────────
+    // Application-wide configuration (e.g. template lock status).
+    // Readable only by admins; no end-user access required.
+
+    match /app_config/{docId} {
+      allow read, write: if isAdmin();
+    }
+
   }
 }

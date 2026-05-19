@@ -179,7 +179,9 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
         // Update in place — keeps one doc per round regardless of how many questions were answered
         await setDoc(doc(db, 'users', user.uid, 'interviewSessions', sessionIdRef.current), data, { merge: true });
       }
-    } catch (_) {} // non-critical
+    } catch (err) {
+      console.warn('[interview] session save failed:', err.code, err.message);
+    }
   };
 
   // ── History loading ─────────────────────────────────────────────────────
@@ -191,7 +193,9 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
       const q    = query(collection(db, 'users', user.uid, 'interviewSessions'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
       setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[interview] history load failed:', err.code, err.message);
+    }
     setHistoryLoading(false);
   };
 
@@ -432,45 +436,26 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               <p style={{ color:'#64748b', fontSize:'0.85rem', margin:0 }}>Each round targets a different type of interview question.</p>
             </div>
 
-            {/* Per-category quota info */}
-            {canUseAI && !isAdmin && user?.uid && (
-              <div style={{ marginTop:'1rem', fontSize:'0.72rem', color:'#475569', textAlign:'center' }}>
-                Each category can be generated up to{' '}
-                <strong style={{ color:'#94a3b8' }}>{AI_SESSION_LIMIT} times per day</strong>
-                {' '}· resets at midnight UTC
-              </div>
-            )}
-
             <div className="is-cat-grid">
-              {CATS.map((cat, i) => {
-                const catCount  = canUseAI && !isAdmin ? (aiCatCounts[cat.id] || 0) : 0;
-                const catLeft   = AI_SESSION_LIMIT - catCount;
-                const atLimit   = canUseAI && !isAdmin && catLeft <= 0;
-                return (
-                  <div
-                    key={cat.id}
-                    className={`is-cat-card${i === 4 ? ' is-full' : ''}`}
-                    style={{ borderLeftColor: atLimit ? '#475569' : cat.color, opacity: atLimit ? 0.75 : 1 }}
-                    onClick={() => canUseAI ? startCat(cat.id) : setShowUpgradeGate(true)}>
-                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
-                      <span style={{ fontSize:'1.5rem', lineHeight:1 }}>{cat.emoji}</span>
-                      <span style={{ fontSize:'0.62rem', background: atLimit ? 'rgba(248,113,113,0.12)' : cat.color+'22', color: atLimit ? '#f87171' : cat.color, padding:'2px 8px', borderRadius:99, fontWeight:700 }}>
-                        {!canUseAI ? '🔒 Pro' : atLimit ? '⚠ Limit' : `${CAT_Q_COUNTS[cat.id]} Qs`}
-                      </span>
-                    </div>
-                    <div style={{ color:'#f1f5f9', fontWeight:700, fontSize:'0.9rem', marginBottom:3 }}>{cat.label}</div>
-                    <div style={{ color:'#64748b', fontSize:'0.75rem', lineHeight:1.5, marginBottom:8 }}>{cat.desc}</div>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                      <div style={{ color: atLimit ? '#f87171' : canUseAI ? cat.color : '#475569', fontSize:'0.7rem', fontWeight:600 }}>
-                        {!canUseAI ? 'Upgrade to unlock →' : atLimit ? 'Limit reached today' : 'Start Round →'}
-                      </div>
-                      {canUseAI && !isAdmin && !atLimit && catCount > 0 && (
-                        <span style={{ fontSize:'0.6rem', color:'#475569' }}>{catLeft}/{AI_SESSION_LIMIT} left</span>
-                      )}
-                    </div>
+              {CATS.map((cat, i) => (
+                <div
+                  key={cat.id}
+                  className={`is-cat-card${i === 4 ? ' is-full' : ''}`}
+                  style={{ borderLeftColor: cat.color }}
+                  onClick={() => canUseAI ? startCat(cat.id) : setShowUpgradeGate(true)}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
+                    <span style={{ fontSize:'1.5rem', lineHeight:1 }}>{cat.emoji}</span>
+                    <span style={{ fontSize:'0.62rem', background: canUseAI ? cat.color+'22' : 'rgba(100,116,139,0.15)', color: canUseAI ? cat.color : '#64748b', padding:'2px 8px', borderRadius:99, fontWeight:700 }}>
+                      {canUseAI ? `${CAT_Q_COUNTS[cat.id]} Qs` : '🔒 Pro'}
+                    </span>
                   </div>
-                );
-              })}
+                  <div style={{ color:'#f1f5f9', fontWeight:700, fontSize:'0.9rem', marginBottom:3 }}>{cat.label}</div>
+                  <div style={{ color:'#64748b', fontSize:'0.75rem', lineHeight:1.5, marginBottom:8 }}>{cat.desc}</div>
+                  <div style={{ color: canUseAI ? cat.color : '#475569', fontSize:'0.7rem', fontWeight:600 }}>
+                    {canUseAI ? 'Start Round →' : 'Upgrade to unlock →'}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -790,7 +775,6 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
 
         {/* ── DAILY AI LIMIT GATE ────────────────────────────────────── */}
         {sessionLimitReached && (() => {
-          const blockedCat   = CATS.find(c => c.id === sessionLimitCat);
           const availableCats = CATS.filter(c => (aiCatCounts[c.id] || 0) < AI_SESSION_LIMIT);
           return (
             <div
@@ -799,40 +783,35 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
               <div
                 style={{ background:'#0f172a', border:'1px solid #334155', borderRadius:16, maxWidth:400, width:'100%', padding:'2rem' }}
                 onClick={e => e.stopPropagation()}>
-                <div style={{ fontSize:'2.5rem', lineHeight:1, marginBottom:'0.75rem', textAlign:'center' }}>⏳</div>
+                <div style={{ fontSize:'2.5rem', lineHeight:1, marginBottom:'0.75rem', textAlign:'center' }}>☕</div>
                 <h3 style={{ color:'#f1f5f9', margin:'0 0 0.5rem', fontSize:'1.05rem', fontFamily:"'Source Serif Pro',Georgia,serif", fontWeight:700, textAlign:'center' }}>
-                  {blockedCat ? `${blockedCat.emoji} ${blockedCat.label} — Limit Reached` : 'Category Limit Reached'}
+                  Daily Limit Reached
                 </h3>
-                <p style={{ color:'#94a3b8', fontSize:'0.83rem', lineHeight:1.6, margin:'0 0 1rem', textAlign:'center' }}>
-                  You've used all <strong style={{ color:'#e2e8f0' }}>{AI_SESSION_LIMIT} sessions</strong> for{' '}
-                  <strong style={{ color:'#e2e8f0' }}>{blockedCat?.label || 'this category'}</strong> today.
-                  Resets at midnight UTC.
+                <p style={{ color:'#94a3b8', fontSize:'0.83rem', lineHeight:1.6, margin:'0 0 1.25rem', textAlign:'center' }}>
+                  You've reached today's AI interview session limit.<br />
+                  Saved sessions can still be viewed anytime.<br />
+                  <strong style={{ color:'#64748b' }}>Your limit resets tomorrow.</strong>
                 </p>
 
                 {/* Other categories still available */}
                 {availableCats.length > 0 && (
-                  <div style={{ marginBottom:'1rem' }}>
+                  <div style={{ marginBottom:'1.25rem' }}>
                     <div style={{ fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.12em', color:'#64748b', fontWeight:700, marginBottom:8 }}>
-                      Still available today
+                      Other rounds still available today
                     </div>
                     <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                      {availableCats.map(c => {
-                        const left = AI_SESSION_LIMIT - (aiCatCounts[c.id] || 0);
-                        return (
-                          <button
-                            key={c.id}
-                            onClick={() => { setSessionLimitReached(false); startCat(c.id); }}
-                            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.6rem 0.875rem', background:'#1e293b', border:`1px solid ${c.color}33`, borderRadius:8, cursor:'pointer', fontFamily:'inherit', transition:'border-color 0.15s' }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = c.color}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = c.color+'33'}>
-                            <span style={{ display:'flex', alignItems:'center', gap:7 }}>
-                              <span style={{ fontSize:'1rem' }}>{c.emoji}</span>
-                              <span style={{ color:'#e2e8f0', fontSize:'0.82rem', fontWeight:600 }}>{c.label}</span>
-                            </span>
-                            <span style={{ fontSize:'0.65rem', color: c.color, fontWeight:700 }}>{left}/{AI_SESSION_LIMIT} left</span>
-                          </button>
-                        );
-                      })}
+                      {availableCats.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => { setSessionLimitReached(false); startCat(c.id); }}
+                          style={{ display:'flex', alignItems:'center', gap:10, padding:'0.6rem 0.875rem', background:'#1e293b', border:`1px solid ${c.color}33`, borderRadius:8, cursor:'pointer', fontFamily:'inherit', transition:'border-color 0.15s' }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = c.color}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = c.color+'33'}>
+                          <span style={{ fontSize:'1rem' }}>{c.emoji}</span>
+                          <span style={{ color:'#e2e8f0', fontSize:'0.82rem', fontWeight:600 }}>{c.label}</span>
+                          <span style={{ marginLeft:'auto', fontSize:'0.7rem', color: c.color, fontWeight:700 }}>Start →</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -840,8 +819,8 @@ export default function InterviewSimulator({ resume, user, onClose, onUpgrade })
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   <button
                     onClick={() => { setSessionLimitReached(false); goHistory(); }}
-                    style={{ padding:'0.75rem', background:'#7c3aed', border:'none', color:'#fff', fontWeight:700, fontSize:'0.85rem', cursor:'pointer', borderRadius:8, fontFamily:'inherit' }}>
-                    📚 Browse Past Sessions
+                    style={{ padding:'0.75rem', background:'#1e293b', border:'1px solid #7c3aed', color:'#a78bfa', fontWeight:700, fontSize:'0.85rem', cursor:'pointer', borderRadius:8, fontFamily:'inherit' }}>
+                    📚 View Saved Sessions
                   </button>
                   <button
                     onClick={() => setSessionLimitReached(false)}

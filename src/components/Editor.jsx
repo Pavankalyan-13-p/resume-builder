@@ -1,5 +1,7 @@
 ﻿import React, { useState } from "react";
-import { X, Plus, Crown, Eye, Trash2, Sparkles } from "lucide-react";
+import { X, Plus, Crown, Eye, Trash2, Sparkles, Check, RefreshCw } from "lucide-react";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase/config.js";
 import { TEMPLATES } from "../data/resumeData.js";
 import { fetchAISummary } from "../data/interviewQuestions.js";
 export default function Editor({ resume, setResume, section, templateId, onSelectTemplate, user, onUpgrade }) {
@@ -219,24 +221,45 @@ function TemplatePickerCard({ t, active, locked, onSelect }) {
   );
 }
 
-function SummarySection({ resume, upP, user, onUpgrade }) {
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError]     = useState(null);
+const AI_SUMMARY_LIMIT = 5; // max AI summary generations per day for Pro users
 
-  const isPremium = user?.plan === 'pro' || user?.role === 'admin';
+function SummarySection({ resume, upP, user, onUpgrade }) {
+  const [aiLoading, setAiLoading]           = useState(false);
+  const [aiError, setAiError]               = useState(null);
+  const [aiSummary, setAiSummary]           = useState(null);   // generated text shown in preview
+  const [aiLimitReached, setAiLimitReached] = useState(false);
+
+  const isAdmin   = user?.role === 'admin';
+  const isPremium = user?.plan === 'pro' || isAdmin;
+
+  // Seed daily count from the user prop (same pattern as the Interview Simulator)
+  const [aiCount, setAiCount] = useState(() => {
+    if (!user?.uid || isAdmin) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    if (user.aiSummaryDate !== today) return 0;
+    return typeof user.aiSummaryCount === 'number' ? user.aiSummaryCount : 0;
+  });
 
   const handleAI = async () => {
     if (!isPremium) { onUpgrade?.('monthly'); return; }
+    if (!isAdmin && aiCount >= AI_SUMMARY_LIMIT) { setAiLimitReached(true); return; }
     setAiLoading(true);
     setAiError(null);
     try {
       const { summary } = await fetchAISummary({
-        role:       resume.personal?.title       || '',
-        skills:     resume.skills                || [],
-        experience: resume.experience            || [],
-        education:  resume.education             || [],
+        role:       resume.personal?.title || '',
+        skills:     resume.skills          || [],
+        experience: resume.experience      || [],
+        education:  resume.education       || [],
       });
-      upP({ summary });
+      setAiSummary(summary);
+      // Increment count only after a successful generation
+      if (!isAdmin && user?.uid) {
+        const today    = new Date().toISOString().slice(0, 10);
+        const newCount = aiCount + 1;
+        setAiCount(newCount);
+        setDoc(doc(db, 'users', user.uid), { aiSummaryCount: newCount, aiSummaryDate: today }, { merge: true }).catch(() => {});
+      }
     } catch (err) {
       if (err.code === 'PREMIUM_REQUIRED') { onUpgrade?.('monthly'); return; }
       setAiError(err.message || 'AI generation failed. Try again.');
@@ -245,10 +268,18 @@ function SummarySection({ resume, upP, user, onUpgrade }) {
     }
   };
 
+  const useThisSummary = () => {
+    if (aiSummary) { upP({ summary: aiSummary }); setAiSummary(null); }
+  };
+
   const wordCount = (resume.personal.summary || '').trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div className="space-y-4">
+      <style>{`
+        @keyframes ss-fade-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes ss-spin    { to { transform: rotate(360deg); } }
+      `}</style>
       <SectionHeader title="Professional summary" hint="40-80 words describing who you are and what you bring." />
       <textarea
         value={resume.personal.summary}
@@ -291,8 +322,98 @@ function SummarySection({ resume, upP, user, onUpgrade }) {
           </button>
         )}
       </div>
+
+      {/* Error message */}
       {aiError && (
         <p style={{ fontSize: "0.75rem", color: "#dc2626", margin: 0 }}>{aiError}</p>
+      )}
+
+      {/* Loading skeleton — only shown before the first result */}
+      {aiLoading && !aiSummary && (
+        <div style={{ border: "1.5px solid #1a2e4a18", borderRadius: 6, padding: "14px 16px", background: "#fafaf9", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 14, height: 14, border: "2px solid #1a2e4a25", borderTopColor: "#1a2e4a", borderRadius: "50%", flexShrink: 0, animation: "ss-spin 0.75s linear infinite" }} />
+          <span style={{ fontSize: "0.8rem", color: "#888" }}>Writing your professional summary…</span>
+        </div>
+      )}
+
+      {/* AI summary preview card */}
+      {aiSummary && (
+        <div style={{ border: "1.5px solid #1a2e4a25", borderRadius: 6, overflow: "hidden", animation: "ss-fade-in 0.22s ease" }}>
+          {/* Card header */}
+          <div style={{ background: "#f0f4fa", borderBottom: "1px solid #1a2e4a15", padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Sparkles style={{ width: 11, height: 11, color: "#1a2e4a" }} />
+              <span style={{ fontSize: "0.67rem", fontWeight: 700, color: "#1a2e4a", textTransform: "uppercase", letterSpacing: "0.1em" }}>AI Generated</span>
+            </div>
+            <button
+              onClick={() => setAiSummary(null)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", padding: 2, lineHeight: 1 }}
+              title="Dismiss">
+              <X style={{ width: 13, height: 13 }} />
+            </button>
+          </div>
+          {/* Generated text */}
+          <div style={{ padding: "14px 16px", background: "#fff" }}>
+            <p style={{ fontSize: "0.85rem", lineHeight: 1.75, color: "#1a1a1a", margin: "0 0 14px" }}>
+              {aiLoading ? (
+                <span style={{ color: "#aaa" }}>Regenerating…</span>
+              ) : aiSummary}
+            </p>
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={useThisSummary}
+                disabled={aiLoading}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "7px 14px", fontSize: "0.75rem", fontWeight: 700,
+                  background: "#1a2e4a", color: "#fff",
+                  border: "none", cursor: aiLoading ? "not-allowed" : "pointer",
+                  borderRadius: 4, fontFamily: "inherit", opacity: aiLoading ? 0.5 : 1,
+                }}>
+                <Check style={{ width: 11, height: 11 }} /> Use This Summary
+              </button>
+              <button
+                onClick={handleAI}
+                disabled={aiLoading}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "7px 12px", fontSize: "0.75rem", fontWeight: 600,
+                  background: "transparent", color: "#1a2e4a",
+                  border: "1.5px solid #1a2e4a35", cursor: aiLoading ? "not-allowed" : "pointer",
+                  borderRadius: 4, fontFamily: "inherit", opacity: aiLoading ? 0.5 : 1,
+                }}>
+                <RefreshCw style={{ width: 11, height: 11 }} />
+                {aiLoading ? "Generating…" : "Generate Again"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Daily limit popup */}
+      {aiLimitReached && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}
+          onClick={() => setAiLimitReached(false)}>
+          <div
+            style={{ background: "#fff", borderRadius: 10, maxWidth: 360, width: "100%", padding: "2rem", boxShadow: "0 24px 64px rgba(0,0,0,0.18)", textAlign: "center" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: "2.25rem", marginBottom: "0.75rem" }}>☕</div>
+            <h3 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: "1.1rem", fontWeight: 700, color: "#1a2e4a", margin: "0 0 0.5rem" }}>
+              Daily Limit Reached
+            </h3>
+            <p style={{ fontSize: "0.83rem", color: "#666", lineHeight: 1.65, margin: "0 0 1.5rem" }}>
+              You've used all {AI_SUMMARY_LIMIT} AI summary generations for today.<br />
+              Your limit resets tomorrow.
+            </p>
+            <button
+              onClick={() => setAiLimitReached(false)}
+              style={{ width: "100%", padding: "0.8rem", background: "#1a2e4a", color: "#fff", border: "none", fontWeight: 700, fontSize: "0.875rem", cursor: "pointer", borderRadius: 6, fontFamily: "inherit" }}>
+              Got it
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

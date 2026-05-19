@@ -315,64 +315,109 @@ Rules:
   }
 });
 
-// ── Gemini JSON parsing helpers ───────────────────────────────────────────────
+// ── AI interview response parser ──────────────────────────────────────────────
+// Reads plain-text section blocks (QUESTION: / HINT: / ANSWER:).
+// No JSON.parse anywhere in the primary path — Gemini control chars can't crash it.
 
-// Fixes literal control characters (newlines, tabs, etc.) that appear inside
-// JSON string values — the most common cause of "Bad control character" errors
-// from Gemini responses that use real newlines instead of \n escape sequences.
-function fixStringControlChars(str) {
-  let result  = '';
-  let inStr   = false;
-  let escaped = false;
-  for (let i = 0; i < str.length; i++) {
-    const ch   = str[i];
-    const code = str.charCodeAt(i);
-    if (escaped)              { result += ch; escaped = false; continue; }
-    if (ch === '\\' && inStr) { result += ch; escaped = true;  continue; }
-    if (ch === '"')           { inStr = !inStr; result += ch;  continue; }
-    if (inStr && code < 32) {
-      if      (ch === '\n') result += '\\n';
-      else if (ch === '\r') result += '\\r';
-      else if (ch === '\t') result += '\\t';
-      else result += `\\u${code.toString(16).padStart(4, '0')}`;
-      continue;
+function parseInterviewResponse(raw) {
+  // Normalise line endings once; everything else works on plain strings.
+  const text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = text.split('\n');
+
+  // Pass 1 — line-by-line section splitting.
+  // Handles both "LABEL:\ncontent" and "LABEL: inline content" variants.
+  const sections = {};
+  let currentLabel = null;
+  let currentLines = [];
+  const flush = () => {
+    if (currentLabel) sections[currentLabel] = currentLines.join('\n').trim();
+  };
+  for (const line of lines) {
+    const m = line.match(/^(QUESTION|HINT|ANSWER):\s*(.*)/i);
+    if (m) {
+      flush();
+      currentLabel = m[1].toUpperCase();
+      currentLines = m[2].trim() ? [m[2].trim()] : [];
+    } else if (currentLabel) {
+      currentLines.push(line);
     }
-    result += ch;
   }
-  return result;
-}
+  flush();
 
-// Robustly extracts {question, hint, answer} from a Gemini text response.
-// Tries JSON.parse after sanitization; falls back to regex extraction so a
-// single malformed response never crashes the simulator.
-function parseInterviewJSON(raw) {
-  // Pass 1: strip code fences, extract the JSON object substring
-  let s = raw.trim()
-    .replace(/^```json\s*/im, '')
-    .replace(/^```\s*/im, '')
-    .replace(/```\s*$/m, '')
-    .trim();
-  const jStart = s.indexOf('{');
-  const jEnd   = s.lastIndexOf('}');
-  if (jStart !== -1 && jEnd > jStart) s = s.slice(jStart, jEnd + 1);
+  if (sections.QUESTION) {
+    return {
+      question: sections.QUESTION.replace(/\n+/g, ' ').trim(),
+      hint:     (sections.HINT   || '').trim(),
+      answer:   (sections.ANSWER || '').trim(),
+    };
+  }
 
-  // Pass 2: fix control characters inside strings, then try JSON.parse
+  // Pass 2 — JSON fallback with control-char fixer (handles any old-format output).
   try {
-    const parsed = JSON.parse(fixStringControlChars(s));
+    let s = text.trim()
+      .replace(/^```json\s*/im, '').replace(/^```\s*/im, '').replace(/```\s*$/m, '').trim();
+    const jStart = s.indexOf('{');
+    const jEnd   = s.lastIndexOf('}');
+    if (jStart !== -1 && jEnd > jStart) s = s.slice(jStart, jEnd + 1);
+
+    let fixed = ''; let inStr = false; let escaped = false;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i]; const code = s.charCodeAt(i);
+      if (escaped)              { fixed += ch; escaped = false; continue; }
+      if (ch === '\\' && inStr) { fixed += ch; escaped = true;  continue; }
+      if (ch === '"')           { inStr = !inStr; fixed += ch;  continue; }
+      if (inStr && code < 32) {
+        if      (ch === '\n') fixed += '\\n';
+        else if (ch === '\r') fixed += '\\r';
+        else if (ch === '\t') fixed += '\\t';
+        else fixed += `\\u${code.toString(16).padStart(4, '0')}`;
+        continue;
+      }
+      fixed += ch;
+    }
+    const parsed = JSON.parse(fixed);
     if (parsed?.question) return parsed;
   } catch (_) {}
 
-  // Pass 3: regex field extraction — tolerant of structural brokenness
+  // Pass 3 — regex field extraction (last resort for structurally broken output).
   const pick = (field) => {
-    const re = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i');
-    const m  = raw.match(re);
+    const m = text.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'));
     return m ? m[1].replace(/\\n/g, '\n').trim() : '';
   };
   const question = pick('question');
   if (question) return { question, hint: pick('hint'), answer: pick('answer') };
 
-  return null; // complete failure — caller returns 502
+  return null;
 }
+
+// Safe per-category fallback questions — returned when all parsing fails.
+const FALLBACKS = {
+  hr: {
+    question: 'What motivated you to apply for this role?',
+    hint: '• Start with what drew you to the company\n• Connect your background to the role\n• Mention a specific goal or growth area',
+    answer: "I've been following the company's work for a while and the role matches where I'm trying to grow. My background gives me a solid foundation and I'm excited to apply it in a new environment. The scope is a step up from where I am now, which is exactly what I'm looking for.",
+  },
+  technical: {
+    question: 'Walk me through how you debug a problem you\'ve never seen before.',
+    hint: '• Reproduce the issue consistently first\n• Isolate the failing component or layer\n• Name a real tool or log you\'d check',
+    answer: "First I try to reproduce it reliably — a bug I can't trigger consistently is hard to fix. Then I narrow it down layer by layer, starting from whatever the error output gives me. I usually reach for logs or a debugger before touching code. At my last job I tracked down a race condition that way by adding targeted log lines until I found the exact interleaving.",
+  },
+  roleSpecific: {
+    question: 'How do you prioritize when multiple deadlines overlap?',
+    hint: '• Assess impact and effort for each task\n• Communicate early with stakeholders\n• Give an example of re-negotiating scope',
+    answer: "I start by listing everything and estimating the real impact if each one slips. Then I go to whoever owns each item and have an honest conversation — most deadlines have some flex if you flag it early. In a past role two launches collided, so I got the teams together, we moved one by a week, and both shipped cleanly.",
+  },
+  projects: {
+    question: 'What was the hardest technical decision you made on a recent project?',
+    hint: '• Name the specific tradeoff you faced\n• Explain why other options didn\'t fit\n• Share the outcome and what you\'d change',
+    answer: "On a recent project I had to decide whether to use an off-the-shelf library or build a lighter version ourselves. The library would have saved time but had licensing restrictions that would have caused problems later. I built a scoped version — took an extra sprint but gave us full control. Looking back it was the right call.",
+  },
+  situational: {
+    question: 'Tell me about a time you disagreed with your manager\'s decision.',
+    hint: '• Describe the context without making anyone a villain\n• Show how you raised your concern professionally\n• Explain what happened and what you learned',
+    answer: "My manager wanted to ship a feature without extra testing because of a deadline. I flagged my concern directly — showed the specific edge cases and estimated the risk. We agreed on a scoped smoke test covering the critical paths and it went smoothly. After that my manager started looping me in on testing decisions earlier.",
+  },
+};
 
 // ── POST /api/ai-interview ────────────────────────────────────────────────────
 const CAT_LABELS = {
@@ -429,24 +474,50 @@ ${context ? `• Background: ${context}` : ''}
 ${CAT_INSTRUCTIONS[category]}
 Question #${qNum} — pick a fresh angle not covered by earlier questions.
 
-HARD LIMITS (count every word — violating any limit means the output is wrong):
-• question : ≤ 12 words, one sentence, no preambles ("Could you...", "I'd like you to...", "Can you tell me...")
-• hint     : exactly 3 bullets, ≤ 8 words each, each starts with an action verb
-• answer   : 3–5 sentences, ≤ 80 words, first person, one real detail (tool name / number / outcome), no filler openers ("I believe", "Great question", "In my experience", "As a professional")
+HARD LIMITS:
+• QUESTION : ≤ 12 words, one sentence, no openers like "Could you...", "Can you tell me...", "I'd like you to..."
+• HINT     : exactly 3 bullet points (•), each ≤ 8 words, each starts with an action verb
+• ANSWER   : 3–5 sentences, ≤ 80 words, first person, include one real detail (tool name / number / outcome), no filler openers ("I believe", "Great question", "In my experience")
 
-MATCH THIS TONE EXACTLY — output must feel like a real person speaking:
-{"question":"How do you handle a deadline you know you'll miss?","hint":"• Flag it early — never at the last minute\n• Propose a scope cut with a plan\n• Show what you will deliver on time","answer":"I flag it early, at least a day before — not an hour. At my last job a feature estimate was off, so I went to my PM with a clear scope-cut proposal. We shipped the core piece on time and moved the nice-to-haves to the next sprint. Being upfront saved us from a much bigger mess."}
+MATCH THIS TONE EXACTLY — output must feel like a real person talking:
 
-OUTPUT FORMAT — pure JSON only, no markdown, no code fences:
-{"question":"...","hint":"• ...\n• ...\n• ...","answer":"..."}`;
+QUESTION:
+How do you handle a deadline you know you'll miss?
+
+HINT:
+• Flag it early — never at the last minute
+• Propose a scope cut with a clear plan
+• Show what you can still deliver on time
+
+ANSWER:
+I flag it early, at least a day before — not an hour. At my last job a feature estimate was off, so I went to my PM with a clear scope-cut proposal. We shipped the core piece on time and moved the nice-to-haves to the next sprint. Being upfront saved us from a much bigger mess.
+
+OUTPUT FORMAT — output ONLY the three sections below, no JSON, no markdown, no extra commentary:
+
+QUESTION:
+<the interview question>
+
+HINT:
+• <action verb + detail>
+• <action verb + detail>
+• <action verb + detail>
+
+ANSWER:
+<3–5 sentences, first person>`;
+
+  const sendFallback = (reason) => {
+    console.warn('[ai-interview] falling back to static question —', reason);
+    const fb = FALLBACKS[category] || FALLBACKS.hr;
+    res.json({ question: fb.question, hint: fb.hint, answer: fb.answer, fallback: true });
+  };
 
   try {
     const result = await gemini.generateContent(prompt);
     const raw    = result.response.text();
-    const parsed = parseInterviewJSON(raw);
+    const parsed = parseInterviewResponse(raw);
     if (!parsed?.question) {
       console.error('[ai-interview] parse failure — raw:', raw.slice(0, 300));
-      return res.status(502).json({ error: 'AI generation failed. Please try again.' });
+      return sendFallback('parse failure');
     }
     res.json({
       question: parsed.question.trim(),
@@ -457,7 +528,7 @@ OUTPUT FORMAT — pure JSON only, no markdown, no code fences:
     console.error('[ai-interview]', err.message);
     if (isQuotaError(err))
       return res.status(429).json({ error: 'AI is temporarily busy. Please try again in a moment.' });
-    res.status(502).json({ error: 'AI generation failed. Please try again.' });
+    sendFallback(err.message);
   }
 });
 

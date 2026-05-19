@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Users, Crown, CreditCard, Download, FileText,
-  Headphones, Menu, X, LogOut, Shield, ExternalLink,
+  Headphones, Lightbulb, Menu, X, LogOut, Shield, ExternalLink,
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import UsersPage from './pages/Users';
@@ -11,6 +11,7 @@ import PaymentsPage from './pages/Payments';
 import DownloadsPage from './pages/Downloads';
 import TemplatesPage from './pages/Templates';
 import SupportPage from './pages/Support';
+import FeedbackPage from './pages/Feedback';
 
 
 const NAV = [
@@ -21,6 +22,7 @@ const NAV = [
   { id: 'downloads', label: 'Downloads',  icon: Download },
   { id: 'templates', label: 'Templates',  icon: FileText },
   { id: 'support',   label: 'Support',    icon: Headphones },
+  { id: 'feedback',  label: 'Feedback',   icon: Lightbulb },
 ];
 
 const PAGE_MAP = {
@@ -31,6 +33,7 @@ const PAGE_MAP = {
   downloads: DownloadsPage,
   templates: TemplatesPage,
   support:   SupportPage,
+  feedback:  FeedbackPage,
 };
 
 export const ADMIN_CSS = `

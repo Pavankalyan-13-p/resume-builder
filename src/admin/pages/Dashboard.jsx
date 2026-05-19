@@ -46,7 +46,7 @@ export default function Dashboard({ onNavigate }) {
       // Support tickets
       let tickets = 0;
       try {
-        const tSnap = await getDocs(query(collection(db, 'support_tickets'), where('status', '==', 'open')));
+        const tSnap = await getDocs(query(collection(db, 'supportTickets'), where('status', '==', 'open')));
         tickets = tSnap.size;
       } catch (_) {}
 
