@@ -169,10 +169,11 @@ async function exportPDF(resume) {
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>${css}</style>
   <style>
-    /* @page margin: 0 so the resume fills the full A4 page exactly as the preview shows.
-       The templates carry their own internal padding — a non-zero @page margin would
-       shrink the printable area to 170mm and break the 1:1 layout match. */
-    @page { size: A4; margin: 0; }
+    /* Vertical page margins give breathing room at the top/bottom of each page.
+       Left/right stay 0 so templates keep their full 210mm width — only height
+       per page reduces (297mm → 281mm with 8mm top + 8mm bottom).
+       This fixes the "content glued to page edge" look on multi-page resumes. */
+    @page { size: A4; margin: 8mm 0; }
     *, *::before, *::after { box-sizing: border-box; }
     /* Preserve background colours and images in print */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -206,6 +207,8 @@ async function exportPDF(resume) {
     header { break-inside: avoid; page-break-inside: avoid; }
     /* Two-column sidebar templates: let the grid span pages naturally */
     .grid { break-inside: auto; }
+    /* Typography polish: prevent lone lines stranded at page top or bottom */
+    p, ul, ol { orphans: 2; widows: 2; }
   </style>
 </head><body>
   <div id="resume-preview-inner">
