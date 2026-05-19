@@ -161,8 +161,8 @@ export default function AdminApp() {
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <img src="/icon-circle.png" alt="Foliant AI" style={{ width:32, height:32, borderRadius:7, flexShrink:0 }} />
               <div>
-                <img src="/logo.png" alt="Foliant AI" style={{ height:18, width:'auto', filter:'brightness(0) invert(1)', opacity:0.9 }} />
-                <div style={{ color:'#475569', fontSize:'0.62rem', textTransform:'uppercase', letterSpacing:'0.1em', marginTop:2 }}>Admin Panel</div>
+                <div style={{ color:'#f1f5f9', fontWeight:700, fontSize:'0.95rem', lineHeight:1, letterSpacing:'-0.01em' }}>Foliant <span style={{ color:'#818cf8' }}>AI</span></div>
+                <div style={{ color:'#475569', fontSize:'0.62rem', textTransform:'uppercase', letterSpacing:'0.1em', marginTop:3 }}>Admin Panel</div>
               </div>
             </div>
             <button onClick={() => setSidebar(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#64748b', padding:4 }}>
