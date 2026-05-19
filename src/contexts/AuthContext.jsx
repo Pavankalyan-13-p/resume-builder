@@ -184,7 +184,9 @@ export function AuthProvider({ children }) {
   const DAILY_LIMIT_FREE = 3;
   const DAILY_LIMIT_PRO  = 10;
 
-  const trackDownload = useCallback(async () => {
+  // Tracks PDF-only quota. Word exports are unlimited and never call this.
+  // Free: 3 PDF/day. Pro: 10 PDF/day (silent abuse cap — not shown in UI).
+  const trackPdfDownload = useCallback(async () => {
     if (!currentUser) return { allowed: true, remaining: Infinity };
     if (userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
 
@@ -262,7 +264,7 @@ export function AuthProvider({ children }) {
     deleteAccount,
     saveResumeToCloud,
     loadResumeFromCloud,
-    trackDownload,
+    trackPdfDownload,
     loadUserResumes,
     saveResumeToSubcollection,
     deleteResumeDoc,

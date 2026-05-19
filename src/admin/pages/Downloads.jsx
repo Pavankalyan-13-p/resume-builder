@@ -65,9 +65,9 @@ export default function DownloadsPage() {
       {toastEl}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.25rem', flexWrap:'wrap', gap:8 }}>
         <div>
-          <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:700, color:'#0f172a' }}>Download Tracking</h2>
+          <h2 style={{ margin:0, fontSize:'1.1rem', fontWeight:700, color:'#0f172a' }}>PDF Export Tracking</h2>
           <p style={{ margin:'2px 0 0', fontSize:'0.78rem', color:'#94a3b8' }}>
-            {totalDownloads} total downloads · {atLimit} users at free limit
+            {totalDownloads} total PDF exports · {atLimit} free users at daily limit · Word exports are unlimited (not tracked)
           </p>
         </div>
         <button className="a-btn a-btn-ghost" onClick={load} disabled={loading}>
@@ -78,9 +78,9 @@ export default function DownloadsPage() {
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'0.75rem', marginBottom:'1.25rem' }}>
         {[
-          { label:'Total Downloads', value: totalDownloads, color:'#6366f1' },
-          { label:'At Free Limit (3/3)', value: atLimit, color:'#dc2626' },
-          { label:'Pro Users (10/day)',  value: users.filter(u=>u.isPremium).length, color:'#f59e0b' },
+          { label:'Total PDF Exports', value: totalDownloads, color:'#6366f1' },
+          { label:'At Free Limit (3/day)', value: atLimit, color:'#dc2626' },
+          { label:'Pro Users (unlimited)', value: users.filter(u=>u.isPremium).length, color:'#f59e0b' },
           { label:'Avg Downloads/User', value: users.length ? (totalDownloads/users.length).toFixed(1) : '0', color:'#10b981' },
         ].map(s => (
           <div key={s.label} className="a-card" style={{ padding:'0.875rem 1.1rem' }}>

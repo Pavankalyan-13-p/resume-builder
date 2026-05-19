@@ -693,7 +693,7 @@ export default function App() {
   const {
     currentUser, userDoc, isPremium, authLoading,
     logout, upgradeToPremium, updateUserProfile, deleteAccount,
-    saveResumeToCloud, loadResumeFromCloud, trackDownload,
+    saveResumeToCloud, loadResumeFromCloud, trackPdfDownload,
     loadUserResumes, saveResumeToSubcollection, deleteResumeDoc,
   } = useAuth();
 
@@ -938,66 +938,50 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Compute daily remaining for the counter shown in the builder UI
+  // PDF quota counter shown in the builder toolbar (free only — Pro shows nothing)
   const today = new Date().toISOString().slice(0, 10);
-  const dailyCount = userDoc?.lastDownloadDate === today ? (userDoc?.downloadCount || 0) : 0;
+  const dailyPdfCount = userDoc?.lastDownloadDate === today ? (userDoc?.downloadCount || 0) : 0;
   const downloadsRemaining = isAdminUser
     ? Infinity
     : isPremium
-      ? Math.max(0, 10 - dailyCount)
-      : Math.max(0, 3 - dailyCount);
+      ? Infinity   // Pro marketing: "Unlimited exports" — internal 10/day cap enforced silently
+      : Math.max(0, 3 - dailyPdfCount);
 
   const handlePDFDownload = async () => {
     if (pdfGenerating) return;
     if (isPreviewLocked) { setUpgradeModal('monthly'); return; }
-    // Gate check — read from already-loaded userDoc, no Firestore write yet
+    // Free users: check visible quota (Pro users see Infinity — never blocked here)
     if (currentUser && !isAdminUser && downloadsRemaining <= 0) {
-      if (isPremium) {
-        showToast("Daily limit reached — Pro plan allows 10 downloads/day. Resets at midnight (UTC).", "error");
-      } else {
-        showToast("Daily limit reached — 3 downloads/day on the free plan. Upgrade to Pro for 10/day.", "error");
-        setUpgradeModal('monthly');
-      }
+      showToast("Daily limit reached — 3 PDF exports/day on the free plan. Upgrade to Pro for unlimited exports.", "error");
+      setUpgradeModal('monthly');
       return;
     }
     setPdfGenerating(true);
     try {
       await exportPDF(resume);
-      // Increment quota ONLY after the PDF was successfully received by the browser
-      const { remaining } = await trackDownload();
-      if (currentUser && !isAdminUser && remaining <= 1) {
-        showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
+      // Increment PDF quota ONLY after successful export — failed exports never consume quota
+      const { allowed, remaining } = await trackPdfDownload();
+      if (!allowed) {
+        // Silent Pro cap hit (10/day abuse protection — not advertised)
+        showToast("Daily export limit reached. Resets at midnight (UTC).", "error");
+      } else if (currentUser && !isAdminUser && !isPremium && remaining <= 1) {
+        showToast(remaining === 0 ? "That was your last PDF export for today." : "1 PDF export left today.", "info");
       }
     } catch (err) {
       console.error("[PDF export]", err);
       showToast(err?.message || "PDF download failed. Please try again.", "error");
-      // trackDownload intentionally NOT called — failed downloads must not consume quota
+      // trackPdfDownload intentionally NOT called — failed exports must not consume quota
     } finally {
       setPdfGenerating(false);
     }
   };
 
   const handleWordDownload = async () => {
-    // Gate check — no Firestore write yet
-    if (currentUser && !isAdminUser && downloadsRemaining <= 0) {
-      if (isPremium) {
-        showToast("Daily limit reached — Pro plan allows 10 downloads/day. Resets at midnight (UTC).", "error");
-      } else {
-        showToast("Daily limit reached — 3 downloads/day on the free plan. Upgrade to Pro for 10/day.", "error");
-        setUpgradeModal('monthly');
-      }
-      return;
-    }
+    // Word exports are unlimited for all users — no quota check or tracking
     try {
       await exportWord(resume, templateId);
-      // Increment quota ONLY after the Word file was successfully generated
-      const { remaining } = await trackDownload();
-      if (currentUser && !isAdminUser && remaining <= 1) {
-        showToast(remaining === 0 ? "That was your last download for today." : "1 download left today.", "info");
-      }
     } catch {
       showToast("Word download failed. Please try again.", "error");
-      // trackDownload intentionally NOT called — failed downloads must not consume quota
     }
   };
 

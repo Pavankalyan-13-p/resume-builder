@@ -463,9 +463,9 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
               <div style={{ width: 44, height: 44, background: "#0f4c81", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
                 <Download style={{ width: 20, height: 20, color: "#fff" }} />
               </div>
-              <h3 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: "1rem", fontWeight: 700, margin: "0 0 6px", color: "#111" }}>Unlimited PDF Downloads</h3>
+              <h3 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: "1rem", fontWeight: 700, margin: "0 0 6px", color: "#111" }}>PDF &amp; Word Exports</h3>
               <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.65, margin: 0 }}>
-                Export your resume as a <strong>pixel-perfect, ATS-clean PDF</strong> any time. No account required. No watermarks. No limits. Just download and apply.
+                Export your resume as a <strong>pixel-perfect, ATS-clean PDF</strong> or editable Word file. No watermarks. Pro users get <strong>unlimited exports</strong>.
               </p>
             </div>
 
@@ -625,7 +625,8 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem 0", display: "flex", flexDirection: "column", gap: "10px" }}>
                 {[
                   "5 free templates (Classic, Modern, Simple ATS, Sleek, Canvas)",
-                  "PDF & Word (.docx) downloads (3/day)",
+                  "3 PDF exports/day",
+                  "Word (.docx) exports — unlimited",
                   "ATS Score Checker",
                   "Resume Preview",
                   "Job Role Suggestions Preview",
@@ -660,7 +661,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
                   "AI Resume Summary Generator",
                   "Personalized Job Matches",
                   "AI Interview Simulator — 5 rounds, 26 AI questions",
-                  "PDF & Word exports — built for active job seekers",
+                  "Unlimited exports — PDF & Word (.docx)",
                   "Priority Support + all future features",
                 ].map(f => (
                   <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "0.875rem", color: "#333", lineHeight: 1.4 }}>
