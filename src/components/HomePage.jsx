@@ -625,8 +625,7 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem 0", display: "flex", flexDirection: "column", gap: "10px" }}>
                 {[
                   "5 free templates (Classic, Modern, Simple ATS, Sleek, Canvas)",
-                  "3 PDF exports/day",
-                  "Word (.docx) exports — unlimited",
+                  "3 PDF exports/day · 10 Word exports/day",
                   "ATS Score Checker",
                   "Resume Preview",
                   "Job Role Suggestions Preview",

@@ -693,7 +693,7 @@ export default function App() {
   const {
     currentUser, userDoc, isPremium, authLoading,
     logout, upgradeToPremium, updateUserProfile, deleteAccount,
-    saveResumeToCloud, loadResumeFromCloud, trackPdfDownload,
+    saveResumeToCloud, loadResumeFromCloud, trackPdfDownload, trackWordDownload,
     loadUserResumes, saveResumeToSubcollection, deleteResumeDoc,
   } = useAuth();
 
@@ -938,14 +938,18 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // PDF quota counter shown in the builder toolbar (free only — Pro shows nothing)
+  // Per-format daily quota counters (free users only — Pro gets Infinity)
   const today = new Date().toISOString().slice(0, 10);
-  const dailyPdfCount = userDoc?.lastDownloadDate === today ? (userDoc?.downloadCount || 0) : 0;
+  const dailyPdfCount  = userDoc?.lastDownloadDate     === today ? (userDoc?.downloadCount     || 0) : 0;
+  const dailyWordCount = userDoc?.lastWordDownloadDate === today ? (userDoc?.wordDownloadCount || 0) : 0;
   const downloadsRemaining = isAdminUser
     ? Infinity
     : isPremium
-      ? Infinity   // Pro marketing: "Unlimited exports" — internal 10/day cap enforced silently
+      ? Infinity   // Pro: "Unlimited exports" — internal 10/day PDF cap enforced silently
       : Math.max(0, 3 - dailyPdfCount);
+  const wordDownloadsRemaining = isAdminUser || isPremium
+    ? Infinity
+    : Math.max(0, 10 - dailyWordCount);
 
   const handlePDFDownload = async () => {
     if (pdfGenerating) return;
@@ -977,9 +981,19 @@ export default function App() {
   };
 
   const handleWordDownload = async () => {
-    // Word exports are unlimited for all users — no quota check or tracking
+    // Free users: 10 Word exports/day. Pro users: unlimited.
+    if (currentUser && !isAdminUser && wordDownloadsRemaining <= 0) {
+      showToast("Daily limit reached — free plan allows 10 Word exports/day. Upgrade to Pro for unlimited exports.", "error");
+      setUpgradeModal('monthly');
+      return;
+    }
     try {
       await exportWord(resume, templateId);
+      // Track quota ONLY after successful export
+      const { remaining } = await trackWordDownload();
+      if (currentUser && !isAdminUser && !isPremium && remaining <= 2) {
+        showToast(remaining === 0 ? "That was your last Word export for today." : `${remaining} Word export${remaining === 1 ? '' : 's'} left today.`, "info");
+      }
     } catch {
       showToast("Word download failed. Please try again.", "error");
     }
@@ -1078,6 +1092,7 @@ export default function App() {
             onOpenImport={() => user?.plan === "pro" ? setImportOpen(true) : (user ? setUpgradeModal('monthly') : setAuthModal("signup"))}
             onOpenMyResumes={handleOpenMyResumes}
             downloadsRemaining={downloadsRemaining}
+            wordDownloadsRemaining={wordDownloadsRemaining}
             isPreviewLocked={isPreviewLocked}
             isPdfLoading={pdfGenerating}
           />

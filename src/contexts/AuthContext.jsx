@@ -181,11 +181,11 @@ export function AuthProvider({ children }) {
     await deleteDoc(doc(db, 'users', currentUser.uid, 'resumes', resumeId));
   }, [currentUser]);
 
-  const DAILY_LIMIT_FREE = 3;
-  const DAILY_LIMIT_PRO  = 10;
+  const DAILY_LIMIT_FREE_PDF  = 3;
+  const DAILY_LIMIT_FREE_WORD = 10;
+  const DAILY_LIMIT_PRO       = 10; // silent abuse cap for PDF; Word unlimited for Pro
 
-  // Tracks PDF-only quota. Word exports are unlimited and never call this.
-  // Free: 3 PDF/day. Pro: 10 PDF/day (silent abuse cap — not shown in UI).
+  // Tracks PDF-only quota. Free: 3/day. Pro: 10/day (silent abuse cap — not shown in UI).
   const trackPdfDownload = useCallback(async () => {
     if (!currentUser) return { allowed: true, remaining: Infinity };
     if (userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
@@ -196,7 +196,7 @@ export function AuthProvider({ children }) {
     const dailyCount = lastDate === today ? (userDoc?.downloadCount || 0) : 0;
 
     const isPro = isActivePremium(userDoc);
-    const limit = isPro ? DAILY_LIMIT_PRO : DAILY_LIMIT_FREE;
+    const limit = isPro ? DAILY_LIMIT_PRO : DAILY_LIMIT_FREE_PDF;
 
     if (dailyCount >= limit) return { allowed: false, remaining: 0 };
 
@@ -209,6 +209,27 @@ export function AuthProvider({ children }) {
       await setDoc(ref, { downloadCount: newCount, lastDownloadDate: today }, { merge: true });
     } catch (e) {}
     return { allowed: true, remaining: limit - newCount };
+  }, [currentUser, userDoc]);
+
+  // Tracks Word-only quota. Free: 10/day. Pro: unlimited.
+  const trackWordDownload = useCallback(async () => {
+    if (!currentUser) return { allowed: true, remaining: Infinity };
+    if (userDoc?.role === "admin") return { allowed: true, remaining: Infinity };
+    if (isActivePremium(userDoc)) return { allowed: true, remaining: Infinity };
+
+    const today = new Date().toISOString().slice(0, 10);
+    const lastDate = userDoc?.lastWordDownloadDate || "";
+    const dailyCount = lastDate === today ? (userDoc?.wordDownloadCount || 0) : 0;
+
+    if (dailyCount >= DAILY_LIMIT_FREE_WORD) return { allowed: false, remaining: 0 };
+
+    const newCount = dailyCount + 1;
+    setUserDoc(prev => ({ ...prev, wordDownloadCount: newCount, lastWordDownloadDate: today }));
+    try {
+      const ref = doc(db, 'users', currentUser.uid);
+      await setDoc(ref, { wordDownloadCount: newCount, lastWordDownloadDate: today }, { merge: true });
+    } catch (e) {}
+    return { allowed: true, remaining: DAILY_LIMIT_FREE_WORD - newCount };
   }, [currentUser, userDoc]);
 
   // ── Auth state listener ────────────────────────────────────────────────
@@ -265,6 +286,7 @@ export function AuthProvider({ children }) {
     saveResumeToCloud,
     loadResumeFromCloud,
     trackPdfDownload,
+    trackWordDownload,
     loadUserResumes,
     saveResumeToSubcollection,
     deleteResumeDoc,

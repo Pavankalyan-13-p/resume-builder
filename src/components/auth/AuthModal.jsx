@@ -107,7 +107,7 @@ export default function AuthModal({ mode = 'login', onClose, onSwitch, onSuccess
         if (!email || !password) { setError('All fields are required.'); setLoading(false); return; }
         if (password.length < 6) { setError('Password must be at least 6 characters.'); setLoading(false); return; }
         await signUpWithEmail(email.trim().toLowerCase(), password, name.trim() || undefined);
-        if (onSuccess) onSuccess('Account created! You get 3 free PDF exports per day, plus unlimited Word exports.');
+        if (onSuccess) onSuccess('Account created! You get 3 PDF and 10 Word exports per day for free.');
         onClose();
       } else if (tab === 'forgot') {
         if (!email) { setError('Enter your email address.'); setLoading(false); return; }

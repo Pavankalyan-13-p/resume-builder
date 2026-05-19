@@ -71,9 +71,9 @@ export default function TermsAndConditions() {
 
       <LegalSection title="5. Free Plan Limitations">
         <LP>
-          Users on the free plan may export up to <strong>3 PDF documents per day</strong>. Word (.docx)
-          exports are unlimited on all plans. The daily PDF limit resets at midnight (UTC). Free plan users
-          have access to 5 basic resume templates and core editing features.
+          Users on the free plan may export up to <strong>3 PDF documents per day</strong> and up to
+          <strong> 10 Word (.docx) documents per day</strong>. Both limits reset at midnight (UTC). Free
+          plan users have access to 5 basic resume templates and core editing features.
         </LP>
         <LP>
           Pro subscribers receive <strong>unlimited PDF and Word exports</strong>. AI-powered

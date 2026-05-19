@@ -11,7 +11,7 @@ import ATSModal from "./ATSModal.jsx";
 import JobSuggestionsModal from "./JobSuggestionsModal.jsx";
 import CoverLetterModal from "./CoverLetterGenerator.jsx";
 export default function BuilderPage(props) {
-  const { resume, setResume, templateId, onSelectTemplate, activeSection, setActiveSection, saveStatus, ats, atsOpen, setAtsOpen, user, onBackHome, onPDF, onWord, onSignIn, onSignUp, onLogout, onUpgrade, sidebarOpen, setSidebarOpen, onOpenProfile, onOpenImport, onOpenMyResumes, downloadsRemaining, isPreviewLocked, isPdfLoading } = props;
+  const { resume, setResume, templateId, onSelectTemplate, activeSection, setActiveSection, saveStatus, ats, atsOpen, setAtsOpen, user, onBackHome, onPDF, onWord, onSignIn, onSignUp, onLogout, onUpgrade, sidebarOpen, setSidebarOpen, onOpenProfile, onOpenImport, onOpenMyResumes, downloadsRemaining, wordDownloadsRemaining, isPreviewLocked, isPdfLoading } = props;
   const Template = TEMPLATE_COMPONENTS[templateId] || TEMPLATE_COMPONENTS["classic"];
   const [mobileTab, setMobileTab]         = useState("edit");
   const [jobModal, setJobModal]           = useState(false);
@@ -136,24 +136,32 @@ export default function BuilderPage(props) {
             </div>
             {/* Word + info tooltip */}
             <div style={{ position: "relative" }}>
-              <div style={{ display: "flex", alignItems: "stretch" }}>
-                <button
-                  className="bldr-word"
-                  onClick={() => { onWord(); setWordTip(false); }}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", border: "1px solid #1a2e4a", borderRight: "none", background: "#fff", color: "#1a2e4a", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
-                >
-                  <Download style={{ width: 14, height: 14 }} /> Word
-                </button>
-                <button
-                  className="bldr-word"
-                  onMouseEnter={() => setWordTip(true)}
-                  onMouseLeave={() => setWordTip(false)}
-                  onClick={(e) => { e.stopPropagation(); setWordTip(v => !v); }}
-                  aria-label="About Word export"
-                  style={{ padding: "7px 8px", border: "1px solid #1a2e4a", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", color: "#94a3b8" }}
-                >
-                  <Info style={{ width: 12, height: 12 }} />
-                </button>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                <div style={{ display: "flex", alignItems: "stretch" }}>
+                  <button
+                    className="bldr-word"
+                    onClick={() => { onWord(); setWordTip(false); }}
+                    disabled={user && wordDownloadsRemaining === 0}
+                    style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 12px", border: "1px solid #1a2e4a", borderRight: "none", background: (user && wordDownloadsRemaining === 0) ? "#f5f5f5" : "#fff", color: (user && wordDownloadsRemaining === 0) ? "#9ca3af" : "#1a2e4a", cursor: (user && wordDownloadsRemaining === 0) ? "not-allowed" : "pointer", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
+                  >
+                    <Download style={{ width: 14, height: 14 }} /> Word
+                  </button>
+                  <button
+                    className="bldr-word"
+                    onMouseEnter={() => setWordTip(true)}
+                    onMouseLeave={() => setWordTip(false)}
+                    onClick={(e) => { e.stopPropagation(); setWordTip(v => !v); }}
+                    aria-label="About Word export"
+                    style={{ padding: "7px 8px", border: "1px solid #1a2e4a", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", color: "#94a3b8" }}
+                  >
+                    <Info style={{ width: 12, height: 12 }} />
+                  </button>
+                </div>
+                {user && wordDownloadsRemaining !== Infinity && (
+                  <span style={{ fontSize: "0.55rem", fontWeight: 600, letterSpacing: "0.03em", color: wordDownloadsRemaining === 0 ? "#dc2626" : wordDownloadsRemaining <= 2 ? "#d97706" : "#6b7280", whiteSpace: "nowrap" }}>
+                    {wordDownloadsRemaining === 0 ? "Limit reached" : `${wordDownloadsRemaining} left today`}
+                  </span>
+                )}
               </div>
               {wordTip && (
                 <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 230, background: "#1e293b", color: "#e2e8f0", padding: "10px 13px", fontSize: "0.73rem", lineHeight: 1.55, zIndex: 200, boxShadow: "0 4px 18px rgba(0,0,0,0.22)", borderRadius: 2 }}>
