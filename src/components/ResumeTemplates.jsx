@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 // ── PDF link helpers ─────────────────────────────────────────────────────────
 // window.print() → PDF preserves <a href> as real clickable links.
@@ -43,14 +43,14 @@ function TemplateClassic({ r }) {
       </div>
       {r.personal.summary && <Section title="Summary" color="#1a2e4a"><p style={JUSTIFY}>{r.personal.summary}</p></Section>}
       {r.experience.length > 0 && <Section title="Experience" color="#1a2e4a">{r.experience.map(e=>(
-        <div key={e.id} className="mb-3">
+        <div key={e.id} className="resume-entry mb-3">
           <div className="flex justify-between items-baseline"><div className="font-bold">{e.role}</div><div className="text-[9.5pt] italic">{e.start} - {e.end}</div></div>
           <div className="italic">{e.company}{e.location && ` · ${e.location}`}</div>
           <ul className="list-disc ml-5 mt-1">{(e.bullets||[]).filter(Boolean).map((b,i)=><li key={i}>{b}</li>)}</ul>
         </div>
       ))}</Section>}
       {r.education.length > 0 && <Section title="Education" color="#1a2e4a">{r.education.map(ed=>(
-        <div key={ed.id} className="mb-2">
+        <div key={ed.id} className="resume-entry mb-2">
           <div className="flex justify-between items-baseline"><div className="font-bold">{ed.degree}</div><div className="text-[9.5pt] italic">{ed.start} - {ed.end}</div></div>
           <div className="italic">{ed.school}{ed.location && ` · ${ed.location}`}</div>
           {ed.details && <div className="text-[9.5pt]">{ed.details}</div>}
@@ -59,10 +59,10 @@ function TemplateClassic({ r }) {
       {r.skills.length > 0 && <Section title="Skills" color="#1a2e4a"><p>{r.skills.join(" · ")}</p></Section>}
       {(r.languages||[]).length > 0 && <Section title="Languages" color="#1a2e4a"><p>{r.languages.map(l=>l.level?`${l.name} (${l.level})`:l.name).join(" · ")}</p></Section>}
       {r.projects.length > 0 && <Section title="Projects" color="#1a2e4a">{r.projects.map(p=>(
-        <div key={p.id} className="mb-2"><span className="font-bold">{p.name}</span>{p.description && ` - ${p.description}`}{p.link && <span className="italic"> (<PL href={uHref(p.link)}>{p.link}</PL>)</span>}</div>
+        <div key={p.id} className="resume-entry mb-2"><span className="font-bold">{p.name}</span>{p.description && ` - ${p.description}`}{p.link && <span className="italic"> (<PL href={uHref(p.link)}>{p.link}</PL>)</span>}</div>
       ))}</Section>}
       {r.certifications.length > 0 && <Section title="Certifications" color="#1a2e4a">{r.certifications.map(c=>(
-        <div key={c.id} className="mb-1"><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
+        <div key={c.id} className="resume-entry mb-1"><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
       ))}</Section>}
     </div>
   );
@@ -97,19 +97,19 @@ function TemplateModern({ r }) {
         <div>
           {r.personal.summary && <ModernSection title="Profile"><p style={JUSTIFY}>{r.personal.summary}</p></ModernSection>}
           {r.experience.length > 0 && <ModernSection title="Experience">{r.experience.map(e=>(
-            <div key={e.id} className="mb-3">
+            <div key={e.id} className="resume-entry mb-3">
               <div className="font-bold text-[10.5pt]">{e.role}</div>
               <div className="text-[9.5pt]" style={{ color: "#b84a2e" }}>{e.company} &middot; {e.start} - {e.end}</div>
               <ul className="list-disc ml-4 mt-1">{(e.bullets||[]).filter(Boolean).map((b,i)=><li key={i}>{b}</li>)}</ul>
             </div>
           ))}</ModernSection>}
           {r.projects.length > 0 && <ModernSection title="Projects">{r.projects.map(p=>(
-            <div key={p.id} className="mb-2"><span className="font-bold">{p.name}</span>{p.description && <span> - {p.description}</span>}</div>
+            <div key={p.id} className="resume-entry mb-2"><span className="font-bold">{p.name}</span>{p.description && <span> - {p.description}</span>}</div>
           ))}</ModernSection>}
         </div>
         <aside>
           {r.education.length > 0 && <ModernSection title="Education">{r.education.map(ed=>(
-            <div key={ed.id} className="mb-2">
+            <div key={ed.id} className="resume-entry mb-2">
               <div className="font-bold text-[9.5pt]">{ed.degree}</div>
               <div className="text-[9pt]">{ed.school}</div>
               <div className="text-[9pt]" style={{ color: "#777" }}>{ed.start} - {ed.end}</div>
@@ -118,7 +118,7 @@ function TemplateModern({ r }) {
           {r.skills.length > 0 && <ModernSection title="Skills"><div className="flex flex-wrap gap-1">{r.skills.map((s,i)=><span key={i} className="text-[9pt] px-2 py-0.5" style={{ background: "#fdf6f2", color: "#b84a2e" }}>{s}</span>)}</div></ModernSection>}
           {(r.languages||[]).length > 0 && <ModernSection title="Languages"><div className="space-y-1">{r.languages.map((l,i)=><div key={i} className="text-[9pt] flex justify-between"><span>{l.name}</span>{l.level&&<span style={{color:"#b84a2e"}}>{l.level}</span>}</div>)}</div></ModernSection>}
           {r.certifications.length > 0 && <ModernSection title="Certifications">{r.certifications.map(c=>(
-            <div key={c.id} className="mb-1 text-[9pt]"><div className="font-bold">{c.name}</div><div>{c.issuer}{c.date && ` · ${c.date}`}</div></div>
+            <div key={c.id} className="resume-entry mb-1 text-[9pt]"><div className="font-bold">{c.name}</div><div>{c.issuer}{c.date && ` · ${c.date}`}</div></div>
           ))}</ModernSection>}
         </aside>
       </div>
@@ -149,7 +149,7 @@ function TemplateMinimal({ r }) {
       {r.experience.length > 0 && <section className="mb-6">
         <h2 className="text-[9pt] uppercase tracking-[0.2em] mb-3" style={{ color: "#999" }}>Experience</h2>
         {r.experience.map(e=>(
-          <div key={e.id} className="mb-4 grid grid-cols-[90px_1fr] gap-4">
+          <div key={e.id} className="resume-entry mb-4 grid grid-cols-[90px_1fr] gap-4">
             <div className="text-[9pt]" style={{ color: "#999" }}>{e.start}-{e.end}</div>
             <div>
               <div className="font-medium">{e.role}, <span style={{ color: "#666" }}>{e.company}</span></div>
@@ -160,7 +160,7 @@ function TemplateMinimal({ r }) {
       </section>}
       {r.education.length > 0 && <section className="mb-6">
         <h2 className="text-[9pt] uppercase tracking-[0.2em] mb-3" style={{ color: "#999" }}>Education</h2>
-        {r.education.map(ed=>(<div key={ed.id} className="grid grid-cols-[90px_1fr] gap-4 mb-2">
+        {r.education.map(ed=>(<div key={ed.id} className="resume-entry grid grid-cols-[90px_1fr] gap-4 mb-2">
           <div className="text-[9pt]" style={{ color: "#999" }}>{ed.start}-{ed.end}</div>
           <div><div className="font-medium">{ed.degree}</div><div style={{ color: "#666" }}>{ed.school}</div></div>
         </div>))}
@@ -175,11 +175,11 @@ function TemplateMinimal({ r }) {
       </section>}
       {r.projects.length > 0 && <section className="mb-6">
         <h2 className="text-[9pt] uppercase tracking-[0.2em] mb-3" style={{ color: "#999" }}>Projects</h2>
-        {r.projects.map(p=><div key={p.id} className="mb-1"><span className="font-medium">{p.name}</span>{p.description && <span style={{ color: "#666" }}> - {p.description}</span>}</div>)}
+        {r.projects.map(p=><div key={p.id} className="resume-entry mb-1"><span className="font-medium">{p.name}</span>{p.description && <span style={{ color: "#666" }}> - {p.description}</span>}</div>)}
       </section>}
       {r.certifications.length > 0 && <section>
         <h2 className="text-[9pt] uppercase tracking-[0.2em] mb-3" style={{ color: "#999" }}>Certifications</h2>
-        {r.certifications.map(c=><div key={c.id} className="mb-1">{c.name} - <span style={{ color: "#666" }}>{c.issuer}{c.date && `, ${c.date}`}</span></div>)}
+        {r.certifications.map(c=><div key={c.id} className="resume-entry mb-1">{c.name} - <span style={{ color: "#666" }}>{c.issuer}{c.date && `, ${c.date}`}</span></div>)}
       </section>}
     </div>
   );
@@ -210,7 +210,7 @@ function TemplateExecutive({ r }) {
         {r.experience.length > 0 && <section className="mb-5">
           <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: "4px" }}>Leadership Experience</div>
           <div style={{ display: "block", height: "2px", width: "100%", backgroundColor: "#0d2540", marginBottom: "8px" }}></div>
-          {r.experience.map(e=>(<div key={e.id} className="mb-3">
+          {r.experience.map(e=>(<div key={e.id} className="resume-entry mb-3">
             <div className="flex justify-between items-baseline"><div className="font-bold text-[11pt]">{e.role.toUpperCase()}</div><div className="text-[9.5pt] italic">{e.start} - {e.end}</div></div>
             <div className="italic">{e.company}{e.location && ` · ${e.location}`}</div>
             <ul className="list-disc ml-5 mt-1">{(e.bullets||[]).filter(Boolean).map((b,i)=><li key={i}>{b}</li>)}</ul>
@@ -220,7 +220,7 @@ function TemplateExecutive({ r }) {
           {r.education.length > 0 && <section>
             <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: "4px" }}>Education</div>
             <div style={{ display: "block", height: "2px", width: "100%", backgroundColor: "#0d2540", marginBottom: "8px" }}></div>
-            {r.education.map(ed=>(<div key={ed.id} className="mb-2"><div className="font-bold">{ed.degree}</div><div className="italic">{ed.school}</div><div className="text-[9.5pt]">{ed.start} - {ed.end}</div></div>))}
+            {r.education.map(ed=>(<div key={ed.id} className="resume-entry mb-2"><div className="font-bold">{ed.degree}</div><div className="italic">{ed.school}</div><div className="text-[9.5pt]">{ed.start} - {ed.end}</div></div>))}
           </section>}
           {r.skills.length > 0 && <section>
             <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: "4px" }}>Core Competencies</div>
@@ -236,7 +236,7 @@ function TemplateExecutive({ r }) {
         {r.certifications.length > 0 && <section className="mt-4">
           <div style={{ fontSize: "11pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: "4px" }}>Certifications</div>
           <div style={{ display: "block", height: "2px", width: "100%", backgroundColor: "#0d2540", marginBottom: "8px" }}></div>
-          {r.certifications.map(c=><div key={c.id}><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>)}
+          {r.certifications.map(c=><div key={c.id} className="resume-entry"><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>)}
         </section>}
       </div>
     </div>
@@ -271,7 +271,7 @@ function TemplateCreative({ r }) {
           {r.education.length > 0 && <div>
             <div style={{ fontSize: "10pt", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "4px" }}>Education</div>
             <div style={{ display: "block", height: "1px", width: "100%", backgroundColor: "rgba(255,255,255,0.4)", marginBottom: "8px" }}></div>
-            {r.education.map(ed=>(<div key={ed.id} className="text-[9pt] mb-2"><div className="font-bold">{ed.degree}</div><div>{ed.school}</div><div className="opacity-80">{ed.start}-{ed.end}</div></div>))}
+            {r.education.map(ed=>(<div key={ed.id} className="resume-entry text-[9pt] mb-2"><div className="font-bold">{ed.degree}</div><div>{ed.school}</div><div className="opacity-80">{ed.start}-{ed.end}</div></div>))}
           </div>}
         </aside>
         <main className="p-6">
@@ -281,7 +281,7 @@ function TemplateCreative({ r }) {
           </section>}
           {r.experience.length > 0 && <section className="mb-5">
             <h2 className="text-[12pt] font-black uppercase mb-2" style={{ color: "#7c2d12" }}>Experience</h2>
-            {r.experience.map(e=>(<div key={e.id} className="mb-3">
+            {r.experience.map(e=>(<div key={e.id} className="resume-entry mb-3">
               <div className="font-bold">{e.role}</div>
               <div className="text-[9.5pt]" style={{ color: "#7c2d12" }}>{e.company} &middot; {e.start}-{e.end}</div>
               <ul className="list-disc ml-4 mt-1">{(e.bullets||[]).filter(Boolean).map((b,i)=><li key={i}>{b}</li>)}</ul>
@@ -289,11 +289,11 @@ function TemplateCreative({ r }) {
           </section>}
           {r.projects.length > 0 && <section className="mb-5">
             <h2 className="text-[12pt] font-black uppercase mb-2" style={{ color: "#7c2d12" }}>Projects</h2>
-            {r.projects.map(p=><div key={p.id} className="mb-2"><span className="font-bold">{p.name}</span>{p.description && ` - ${p.description}`}</div>)}
+            {r.projects.map(p=><div key={p.id} className="resume-entry mb-2"><span className="font-bold">{p.name}</span>{p.description && ` - ${p.description}`}</div>)}
           </section>}
           {r.certifications.length > 0 && <section>
             <h2 className="text-[12pt] font-black uppercase mb-2" style={{ color: "#7c2d12" }}>Certifications</h2>
-            {r.certifications.map(c=><div key={c.id}><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>)}
+            {r.certifications.map(c=><div key={c.id} className="resume-entry"><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>)}
           </section>}
         </main>
       </div>
@@ -320,7 +320,7 @@ function TemplateTechnical({ r }) {
       </div>
       {r.personal.summary && <TechSection title="## about"><p style={JUSTIFY}>{r.personal.summary}</p></TechSection>}
       {r.experience.length > 0 && <TechSection title="## experience">{r.experience.map(e=>(
-        <div key={e.id} className="mb-3">
+        <div key={e.id} className="resume-entry mb-3">
           <div><span className="font-bold" style={{ color: "#14532d" }}>{e.role}</span> @ {e.company} <span style={{ color: "#888" }}>[{e.start}-{e.end}]</span></div>
           <ul className="ml-4 mt-1">{(e.bullets||[]).filter(Boolean).map((b,i)=><li key={i}>{"- "}{b}</li>)}</ul>
         </div>
@@ -328,13 +328,13 @@ function TemplateTechnical({ r }) {
       {r.skills.length > 0 && <TechSection title="## skills"><div className="flex flex-wrap gap-1">{r.skills.map((s,i)=><span key={i} className="px-2 py-0.5 text-[8.5pt]" style={{ background: "#14532d20", color: "#14532d" }}>{s}</span>)}</div></TechSection>}
       {(r.languages||[]).length > 0 && <TechSection title="## languages"><div className="flex flex-wrap gap-x-4">{r.languages.map((l,i)=><span key={i}>{l.name}{l.level&&<span style={{color:"#888"}}> [{l.level}]</span>}</span>)}</div></TechSection>}
       {r.projects.length > 0 && <TechSection title="## projects">{r.projects.map(p=>(
-        <div key={p.id} className="mb-1"><span className="font-bold">{p.name}</span>{p.link && <span style={{ color: "#14532d" }}> &middot; <PL href={uHref(p.link)}>{p.link}</PL></span>}{p.description && <div className="ml-4">{p.description}</div>}</div>
+        <div key={p.id} className="resume-entry mb-1"><span className="font-bold">{p.name}</span>{p.link && <span style={{ color: "#14532d" }}> &middot; <PL href={uHref(p.link)}>{p.link}</PL></span>}{p.description && <div className="ml-4">{p.description}</div>}</div>
       ))}</TechSection>}
       {r.education.length > 0 && <TechSection title="## education">{r.education.map(ed=>(
-        <div key={ed.id} className="mb-1"><span className="font-bold">{ed.degree}</span>, {ed.school} <span style={{ color: "#888" }}>[{ed.start}-{ed.end}]</span></div>
+        <div key={ed.id} className="resume-entry mb-1"><span className="font-bold">{ed.degree}</span>, {ed.school} <span style={{ color: "#888" }}>[{ed.start}-{ed.end}]</span></div>
       ))}</TechSection>}
       {r.certifications.length > 0 && <TechSection title="## certifications">{r.certifications.map(c=>(
-        <div key={c.id}><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && ` (${c.date})`}</div>
+        <div key={c.id} className="resume-entry"><span className="font-bold">{c.name}</span> - {c.issuer}{c.date && ` (${c.date})`}</div>
       ))}</TechSection>}
     </div>
   );
@@ -357,7 +357,7 @@ function TemplateElegant({ r }) {
       </header>
       {r.personal.summary && <ElegantSection title="Profile" accent={accent}><p style={{ fontStyle: "italic", color: "#333", ...JUSTIFY }}>{r.personal.summary}</p></ElegantSection>}
       {r.experience.length > 0 && <ElegantSection title="Experience" accent={accent}>{r.experience.map(e => (
-        <div key={e.id} style={{ marginBottom: 14 }}>
+        <div key={e.id} className="resume-entry" style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontWeight: 700 }}>{e.role}</span>
             <span style={{ fontSize: "9pt", color: "#888", fontStyle: "italic" }}>{e.start} - {e.end}</span>
@@ -367,7 +367,7 @@ function TemplateElegant({ r }) {
         </div>
       ))}</ElegantSection>}
       {r.education.length > 0 && <ElegantSection title="Education" accent={accent}>{r.education.map(ed => (
-        <div key={ed.id} style={{ marginBottom: 10 }}>
+        <div key={ed.id} className="resume-entry" style={{ marginBottom: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontWeight: 700 }}>{ed.degree}</span>
             <span style={{ fontSize: "9pt", color: "#888", fontStyle: "italic" }}>{ed.start} - {ed.end}</span>
@@ -379,10 +379,10 @@ function TemplateElegant({ r }) {
       {r.skills.length > 0 && <ElegantSection title="Skills" accent={accent}><p style={{ color: "#444" }}>{r.skills.join(" · ")}</p></ElegantSection>}
       {(r.languages || []).length > 0 && <ElegantSection title="Languages" accent={accent}><p style={{ color: "#444" }}>{r.languages.map(l => l.level ? `${l.name} (${l.level})` : l.name).join(" · ")}</p></ElegantSection>}
       {r.projects.length > 0 && <ElegantSection title="Projects" accent={accent}>{r.projects.map(p => (
-        <div key={p.id} style={{ marginBottom: 8 }}><span style={{ fontWeight: 700 }}>{p.name}</span>{p.description && <span style={{ color: "#555" }}> - {p.description}</span>}</div>
+        <div key={p.id} className="resume-entry" style={{ marginBottom: 8 }}><span style={{ fontWeight: 700 }}>{p.name}</span>{p.description && <span style={{ color: "#555" }}> - {p.description}</span>}</div>
       ))}</ElegantSection>}
       {r.certifications.length > 0 && <ElegantSection title="Certifications" accent={accent}>{r.certifications.map(c => (
-        <div key={c.id} style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
+        <div key={c.id} className="resume-entry" style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
       ))}</ElegantSection>}
     </div>
   );
@@ -419,7 +419,7 @@ function TemplateCorporate({ r }) {
       <div style={{ padding: "22px 40px" }}>
         {r.personal.summary && <CorpSection title="Professional Summary" accent={accent}><p style={{ color: "#334155", lineHeight: 1.6, ...JUSTIFY }}>{r.personal.summary}</p></CorpSection>}
         {r.experience.length > 0 && <CorpSection title="Work Experience" accent={accent}>{r.experience.map(e => (
-          <div key={e.id} style={{ marginBottom: 14, paddingLeft: 12, borderLeft: `3px solid ${accent}25` }}>
+          <div key={e.id} className="resume-entry" style={{ marginBottom: 14, paddingLeft: 12, borderLeft: `3px solid ${accent}25` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div><div style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</div>
               <div style={{ color: accent, fontSize: "9.5pt", fontWeight: 600 }}>{e.company}{e.location && ` · ${e.location}`}</div></div>
@@ -430,7 +430,7 @@ function TemplateCorporate({ r }) {
         ))}</CorpSection>}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           {r.education.length > 0 && <CorpSection title="Education" accent={accent}>{r.education.map(ed => (
-            <div key={ed.id} style={{ marginBottom: 10 }}>
+            <div key={ed.id} className="resume-entry" style={{ marginBottom: 10 }}>
               <div style={{ fontWeight: 700, fontSize: "9.5pt" }}>{ed.degree}</div>
               <div style={{ color: accent, fontSize: "9pt" }}>{ed.school}</div>
               <div style={{ color: "#64748b", fontSize: "8.5pt" }}>{ed.start} - {ed.end}</div>
@@ -445,10 +445,10 @@ function TemplateCorporate({ r }) {
         </div>
         {(r.languages || []).length > 0 && <CorpSection title="Languages" accent={accent}><div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>{r.languages.map((l, i) => <span key={i} style={{ fontSize: "9pt" }}>{l.name}{l.level && <span style={{ color: "#888" }}> ({l.level})</span>}</span>)}</div></CorpSection>}
         {r.projects.length > 0 && <CorpSection title="Projects" accent={accent}>{r.projects.map(p => (
-          <div key={p.id} style={{ marginBottom: 6 }}><span style={{ fontWeight: 700 }}>{p.name}</span>{p.description && <span style={{ color: "#555" }}> - {p.description}</span>}{p.link && <span style={{ color: accent, fontSize: "8.5pt" }}> &middot; <PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
+          <div key={p.id} className="resume-entry" style={{ marginBottom: 6 }}><span style={{ fontWeight: 700 }}>{p.name}</span>{p.description && <span style={{ color: "#555" }}> - {p.description}</span>}{p.link && <span style={{ color: accent, fontSize: "8.5pt" }}> &middot; <PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
         ))}</CorpSection>}
         {r.certifications.length > 0 && <CorpSection title="Certifications" accent={accent}>{r.certifications.map(c => (
-          <div key={c.id} style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
+          <div key={c.id} className="resume-entry" style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
         ))}</CorpSection>}
       </div>
     </div>
@@ -498,7 +498,7 @@ function TemplateFresher({ r }) {
         {r.education.length > 0 && (
           <FreshSection title="Education" accent={accent}>
             {r.education.map(ed => (
-              <div key={ed.id} style={{ marginBottom: 12 }}>
+              <div key={ed.id} className="resume-entry" style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontWeight: 700, fontSize: "10.5pt", color: "#0f172a" }}>{ed.degree}</span>
                   <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>{ed.start} – {ed.end}</span>
@@ -523,7 +523,7 @@ function TemplateFresher({ r }) {
         {r.projects.length > 0 && (
           <FreshSection title="Projects" accent={accent}>
             {r.projects.map(p => (
-              <div key={p.id} style={{ marginBottom: 10 }}>
+              <div key={p.id} className="resume-entry" style={{ marginBottom: 10 }}>
                 <div>
                   <span style={{ fontWeight: 700 }}>{p.name}</span>
                   {p.link && <span style={{ fontSize: "8.5pt", color: "#64748b", marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}
@@ -537,7 +537,7 @@ function TemplateFresher({ r }) {
         {r.experience.length > 0 && (
           <FreshSection title="Experience & Internships" accent={accent}>
             {r.experience.map(e => (
-              <div key={e.id} style={{ marginBottom: 12 }}>
+              <div key={e.id} className="resume-entry" style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <div>
                     <span style={{ fontWeight: 700 }}>{e.role}</span>
@@ -557,7 +557,7 @@ function TemplateFresher({ r }) {
         {r.certifications.length > 0 && (
           <FreshSection title="Certifications" accent={accent}>
             {r.certifications.map(c => (
-              <div key={c.id} style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div key={c.id} className="resume-entry" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <div>
                   <span style={{ fontWeight: 700 }}>{c.name}</span>
                   {c.issuer && <span style={{ color: "#64748b", fontSize: "9.5pt" }}> · {c.issuer}</span>}
@@ -616,7 +616,7 @@ function TemplateInternational({ r }) {
       </header>
       {r.personal.summary && <IntlSection title="Personal Statement" accent={accent}><p style={{ color: "#374151", ...JUSTIFY }}>{r.personal.summary}</p></IntlSection>}
       {r.experience.length > 0 && <IntlSection title="Work Experience" accent={accent}>{r.experience.map(e => (
-        <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "0 16px", marginBottom: 14 }}>
+        <div key={e.id} className="resume-entry" style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "0 16px", marginBottom: 14 }}>
           <div style={{ fontSize: "8.5pt", color: "#6b7280", paddingTop: 1 }}>{e.start} -<br />{e.end}</div>
           <div>
             <div style={{ fontWeight: 700 }}>{e.role}</div>
@@ -626,7 +626,7 @@ function TemplateInternational({ r }) {
         </div>
       ))}</IntlSection>}
       {r.education.length > 0 && <IntlSection title="Education" accent={accent}>{r.education.map(ed => (
-        <div key={ed.id} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "0 16px", marginBottom: 10 }}>
+        <div key={ed.id} className="resume-entry" style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "0 16px", marginBottom: 10 }}>
           <div style={{ fontSize: "8.5pt", color: "#6b7280", paddingTop: 1 }}>{ed.start} -<br />{ed.end}</div>
           <div>
             <div style={{ fontWeight: 700 }}>{ed.degree}</div>
@@ -642,10 +642,10 @@ function TemplateInternational({ r }) {
         </div>
       </IntlSection>}
       {r.projects.length > 0 && <IntlSection title="Projects" accent={accent}>{r.projects.map(p => (
-        <div key={p.id} style={{ marginBottom: 6 }}><span style={{ fontWeight: 700 }}>{p.name}</span>{p.description && <span style={{ color: "#4b5563" }}> - {p.description}</span>}</div>
+        <div key={p.id} className="resume-entry" style={{ marginBottom: 6 }}><span style={{ fontWeight: 700 }}>{p.name}</span>{p.description && <span style={{ color: "#4b5563" }}> - {p.description}</span>}</div>
       ))}</IntlSection>}
       {r.certifications.length > 0 && <IntlSection title="Certifications &amp; Awards" accent={accent}>{r.certifications.map(c => (
-        <div key={c.id} style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span>, {c.issuer}{c.date && `, ${c.date}`}</div>
+        <div key={c.id} className="resume-entry" style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span>, {c.issuer}{c.date && `, ${c.date}`}</div>
       ))}</IntlSection>}
     </div>
   );
@@ -691,7 +691,7 @@ function TemplateTwoColumn({ r }) {
           </div>
         </TwoColSideSection>}
         {r.education.length > 0 && <TwoColSideSection title="Education" accent={sideAccent}>{r.education.map(ed => (
-          <div key={ed.id} style={{ marginBottom: 10, fontSize: "8.5pt" }}>
+          <div key={ed.id} className="resume-entry" style={{ marginBottom: 10, fontSize: "8.5pt" }}>
             <div style={{ fontWeight: 700, color: "#e2e8f0" }}>{ed.degree}</div>
             <div style={{ color: "#94a3b8" }}>{ed.school}</div>
             <div style={{ color: "#64748b" }}>{ed.start} - {ed.end}</div>
@@ -707,7 +707,7 @@ function TemplateTwoColumn({ r }) {
       <main style={{ padding: "28px 28px 28px 22px" }}>
         {r.personal.summary && <TwoColMainSection title="Professional Summary" accent={accent}><p style={{ color: "#475569", lineHeight: 1.6, ...JUSTIFY }}>{r.personal.summary}</p></TwoColMainSection>}
         {r.experience.length > 0 && <TwoColMainSection title="Experience" accent={accent}>{r.experience.map(e => (
-          <div key={e.id} style={{ marginBottom: 14 }}>
+          <div key={e.id} className="resume-entry" style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div><div style={{ fontWeight: 700 }}>{e.role}</div><div style={{ color: "#3b82f6", fontSize: "9.5pt", fontWeight: 600 }}>{e.company}{e.location && ` · ${e.location}`}</div></div>
               <span style={{ fontSize: "8.5pt", color: "#64748b", whiteSpace: "nowrap", marginLeft: 8 }}>{e.start} - {e.end}</span>
@@ -716,14 +716,14 @@ function TemplateTwoColumn({ r }) {
           </div>
         ))}</TwoColMainSection>}
         {r.projects.length > 0 && <TwoColMainSection title="Projects" accent={accent}>{r.projects.map(p => (
-          <div key={p.id} style={{ marginBottom: 8 }}>
+          <div key={p.id} className="resume-entry" style={{ marginBottom: 8 }}>
             <span style={{ fontWeight: 700 }}>{p.name}</span>
             {p.link && <span style={{ color: "#3b82f6", fontSize: "8.5pt" }}> &middot; <PL href={uHref(p.link)}>{p.link}</PL></span>}
             {p.description && <p style={{ color: "#475569", margin: "3px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
           </div>
         ))}</TwoColMainSection>}
         {r.certifications.length > 0 && <TwoColMainSection title="Certifications" accent={accent}>{r.certifications.map(c => (
-          <div key={c.id} style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
+          <div key={c.id} className="resume-entry" style={{ marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{c.name}</span> - {c.issuer}{c.date && `, ${c.date}`}</div>
         ))}</TwoColMainSection>}
       </main>
     </div>
@@ -775,7 +775,7 @@ function TemplateSleek({ r }) {
       <div style={{ padding: "20px 44px 36px" }}>
         {r.personal.summary && <SleekSection title="Summary" accent={accent}><p style={{ color: "#475569", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></SleekSection>}
         {r.experience.length > 0 && <SleekSection title="Experience" accent={accent}>{r.experience.map(e => (
-          <div key={e.id} style={{ marginBottom: 14 }}>
+          <div key={e.id} className="resume-entry" style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
               <div>
                 <span style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</span>
@@ -788,7 +788,7 @@ function TemplateSleek({ r }) {
           </div>
         ))}</SleekSection>}
         {r.education.length > 0 && <SleekSection title="Education" accent={accent}>{r.education.map(ed => (
-          <div key={ed.id} style={{ marginBottom: 10 }}>
+          <div key={ed.id} className="resume-entry" style={{ marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
               <span style={{ fontWeight: 700 }}>{ed.degree}</span>
               <span style={{ fontSize: "8.5pt", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>{ed.start} – {ed.end}</span>
@@ -800,13 +800,13 @@ function TemplateSleek({ r }) {
         {r.skills.length > 0 && <SleekSection title="Skills" accent={accent}><p style={{ color: "#334155", margin: 0 }}>{r.skills.join("   ·   ")}</p></SleekSection>}
         {(r.languages || []).length > 0 && <SleekSection title="Languages" accent={accent}><p style={{ color: "#334155", margin: 0 }}>{r.languages.map(l => l.level ? `${l.name} (${l.level})` : l.name).join("   ·   ")}</p></SleekSection>}
         {r.projects.length > 0 && <SleekSection title="Projects" accent={accent}>{r.projects.map(p => (
-          <div key={p.id} style={{ marginBottom: 10 }}>
+          <div key={p.id} className="resume-entry" style={{ marginBottom: 10 }}>
             <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ fontSize: "8.5pt", color: accent, marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
             {p.description && <p style={{ color: "#475569", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
           </div>
         ))}</SleekSection>}
         {r.certifications.length > 0 && <SleekSection title="Certifications" accent={accent}>{r.certifications.map(c => (
-          <div key={c.id} style={{ marginBottom: 5, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div key={c.id} className="resume-entry" style={{ marginBottom: 5, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <div><span style={{ fontWeight: 700 }}>{c.name}</span>{c.issuer && <span style={{ color: "#64748b", fontSize: "9.5pt" }}> · {c.issuer}</span>}</div>
             {c.date && <span style={{ fontSize: "8.5pt", color: "#94a3b8" }}>{c.date}</span>}
           </div>
@@ -861,7 +861,7 @@ function TemplateCanvas({ r }) {
         </CanvasSideSection>}
         {r.education.length > 0 && <CanvasSideSection title="Education">
           {r.education.map(ed => (
-            <div key={ed.id} style={{ marginBottom: 10, fontSize: "8.5pt" }}>
+            <div key={ed.id} className="resume-entry" style={{ marginBottom: 10, fontSize: "8.5pt" }}>
               <div style={{ fontWeight: 700, color: dark, lineHeight: 1.3 }}>{ed.degree}</div>
               <div style={{ color: muted, lineHeight: 1.4 }}>{ed.school}</div>
               <div style={{ color: faint }}>{ed.start} – {ed.end}</div>
@@ -884,7 +884,7 @@ function TemplateCanvas({ r }) {
       <main style={{ padding: "30px 28px 30px 22px", background: "#fff" }}>
         {r.personal.summary && <CanvasMainSection title="Profile"><p style={{ color: "#44403c", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></CanvasMainSection>}
         {r.experience.length > 0 && <CanvasMainSection title="Experience">{r.experience.map(e => (
-          <div key={e.id} style={{ marginBottom: 14 }}>
+          <div key={e.id} className="resume-entry" style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
               <div>
                 <span style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</span>
@@ -897,13 +897,13 @@ function TemplateCanvas({ r }) {
           </div>
         ))}</CanvasMainSection>}
         {r.projects.length > 0 && <CanvasMainSection title="Projects">{r.projects.map(p => (
-          <div key={p.id} style={{ marginBottom: 10 }}>
+          <div key={p.id} className="resume-entry" style={{ marginBottom: 10 }}>
             <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ fontSize: "8.5pt", color: muted, marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
             {p.description && <p style={{ color: "#57534e", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
           </div>
         ))}</CanvasMainSection>}
         {r.certifications.length > 0 && <CanvasMainSection title="Certifications">{r.certifications.map(c => (
-          <div key={c.id} style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div key={c.id} className="resume-entry" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <div><span style={{ fontWeight: 700 }}>{c.name}</span>{c.issuer && <span style={{ color: muted, fontSize: "9.5pt" }}> · {c.issuer}</span>}</div>
             {c.date && <span style={{ fontSize: "8.5pt", color: faint }}>{c.date}</span>}
           </div>
@@ -954,7 +954,7 @@ function TemplateApex({ r }) {
       </header>
       {r.personal.summary && <ApexSection title="Profile" accent={accent}><p style={{ color: "#334155", margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></ApexSection>}
       {r.experience.length > 0 && <ApexSection title="Experience" accent={accent}>{r.experience.map(e => (
-        <div key={e.id} style={{ marginBottom: 16 }}>
+        <div key={e.id} className="resume-entry" style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
             <span style={{ fontWeight: 700, fontSize: "10.5pt" }}>{e.role}</span>
             <span style={{ fontSize: "9pt", color: faint, whiteSpace: "nowrap", flexShrink: 0, fontStyle: "italic" }}>{e.start} – {e.end}</span>
@@ -964,7 +964,7 @@ function TemplateApex({ r }) {
         </div>
       ))}</ApexSection>}
       {r.education.length > 0 && <ApexSection title="Education" accent={accent}>{r.education.map(ed => (
-        <div key={ed.id} style={{ marginBottom: 12 }}>
+        <div key={ed.id} className="resume-entry" style={{ marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
             <span style={{ fontWeight: 700 }}>{ed.degree}</span>
             <span style={{ fontSize: "9pt", color: faint, whiteSpace: "nowrap", flexShrink: 0, fontStyle: "italic" }}>{ed.start} – {ed.end}</span>
@@ -980,13 +980,13 @@ function TemplateApex({ r }) {
       </ApexSection>}
       {(r.languages || []).length > 0 && <ApexSection title="Languages" accent={accent}><p style={{ color: "#475569", margin: 0 }}>{r.languages.map(l => l.level ? `${l.name} (${l.level})` : l.name).join("   ·   ")}</p></ApexSection>}
       {r.projects.length > 0 && <ApexSection title="Projects" accent={accent}>{r.projects.map(p => (
-        <div key={p.id} style={{ marginBottom: 10 }}>
+        <div key={p.id} className="resume-entry" style={{ marginBottom: 10 }}>
           <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ color: accent, fontSize: "8.5pt", marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
           {p.description && <p style={{ color: "#475569", margin: "2px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
         </div>
       ))}</ApexSection>}
       {r.certifications.length > 0 && <ApexSection title="Certifications" accent={accent}>{r.certifications.map(c => (
-        <div key={c.id} style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <div key={c.id} className="resume-entry" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div><span style={{ fontWeight: 700 }}>{c.name}</span>{c.issuer && <span style={{ color: muted, fontSize: "9.5pt" }}> · {c.issuer}</span>}</div>
           {c.date && <span style={{ fontSize: "8.5pt", color: faint }}>{c.date}</span>}
         </div>
@@ -1043,7 +1043,7 @@ function TemplateMeridian({ r }) {
           {r.personal.summary && <MeridianMainSection title="Summary" accent={accent}><p style={{ color: muted, margin: 0, ...JUSTIFY }}>{r.personal.summary}</p></MeridianMainSection>}
           {r.experience.length > 0 && <MeridianMainSection title="Experience" accent={accent}>
             {r.experience.map(e => (
-              <div key={e.id} style={{ marginBottom: 16 }}>
+              <div key={e.id} className="resume-entry" style={{ marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: "10.5pt", color: text }}>{e.role}</div>
@@ -1057,7 +1057,7 @@ function TemplateMeridian({ r }) {
           </MeridianMainSection>}
           {r.projects.length > 0 && <MeridianMainSection title="Projects" accent={accent}>
             {r.projects.map(p => (
-              <div key={p.id} style={{ marginBottom: 11 }}>
+              <div key={p.id} className="resume-entry" style={{ marginBottom: 11 }}>
                 <div><span style={{ fontWeight: 700 }}>{p.name}</span>{p.link && <span style={{ color: accent, fontSize: "8.5pt", marginLeft: 8 }}><PL href={uHref(p.link)}>{p.link}</PL></span>}</div>
                 {p.description && <p style={{ color: muted, margin: "3px 0 0", fontSize: "9.5pt" }}>{p.description}</p>}
               </div>
@@ -1074,7 +1074,7 @@ function TemplateMeridian({ r }) {
           </MeridianPanelSection>}
           {r.education.length > 0 && <MeridianPanelSection title="Education" accent={accent}>
             {r.education.map(ed => (
-              <div key={ed.id} style={{ marginBottom: 12, fontSize: "8.5pt" }}>
+              <div key={ed.id} className="resume-entry" style={{ marginBottom: 12, fontSize: "8.5pt" }}>
                 <div style={{ fontWeight: 700, color: text, lineHeight: 1.3 }}>{ed.degree}</div>
                 <div style={{ color: accent, fontWeight: 500, marginTop: 2 }}>{ed.school}</div>
                 <div style={{ color: faint, marginTop: 1 }}>{ed.start} – {ed.end}</div>
@@ -1084,7 +1084,7 @@ function TemplateMeridian({ r }) {
           </MeridianPanelSection>}
           {r.certifications.length > 0 && <MeridianPanelSection title="Certifications" accent={accent}>
             {r.certifications.map(c => (
-              <div key={c.id} style={{ marginBottom: 10, fontSize: "8.5pt" }}>
+              <div key={c.id} className="resume-entry" style={{ marginBottom: 10, fontSize: "8.5pt" }}>
                 <div style={{ fontWeight: 700, color: text, lineHeight: 1.3 }}>{c.name}</div>
                 {c.issuer && <div style={{ color: muted, marginTop: 1 }}>{c.issuer}</div>}
                 {c.date && <div style={{ color: faint, fontSize: "7.5pt", marginTop: 1 }}>{c.date}</div>}

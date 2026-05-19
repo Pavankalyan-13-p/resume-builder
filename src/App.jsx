@@ -191,6 +191,21 @@ async function exportPDF(resume) {
     [style*="height: 0.5px"], [style*="height:0.5px"] { height: 1px !important; min-height: 1px !important; }
     [style*="height: 1px"],   [style*="height:1px"]   { min-height: 1px !important; }
     hr { min-height: 1px !important; }
+    /* ── Multi-page page-break safety ───────────────────────────────────────
+       Puppeteer renders with @media print active. These rules prevent resume
+       entries from being awkwardly sliced across page boundaries. */
+    /* Individual entries (job, education, project, cert) stay whole */
+    .resume-entry { break-inside: avoid; page-break-inside: avoid; }
+    /* Bullet points never orphan */
+    li { break-inside: avoid; page-break-inside: avoid; }
+    /* Section headings stay with their content — no orphaned headers */
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    /* Section labels used by Classic/Executive/Elegant (div with uppercase text) */
+    section > div:first-child { break-after: avoid; page-break-after: avoid; }
+    /* Keep the contact header block together */
+    header { break-inside: avoid; page-break-inside: avoid; }
+    /* Two-column sidebar templates: let the grid span pages naturally */
+    .grid { break-inside: auto; }
   </style>
 </head><body>
   <div id="resume-preview-inner">

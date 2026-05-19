@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FileText, Edit3, Briefcase, GraduationCap, Code, Globe, Award,
   Sparkles, Star, User, Eye, Crown, Target, Lock, Check,
@@ -17,6 +17,8 @@ export default function BuilderPage(props) {
   const [jobModal, setJobModal]           = useState(false);
   const [clModal, setClModal]             = useState(false);
   const [wordTip, setWordTip]             = useState(false);
+  const previewInnerRef = useRef(null);
+  const previewWrapRef  = useRef(null);
 
   const openInterviewSimulator = () => window.open('/interview', '_blank');
 
@@ -26,6 +28,22 @@ export default function BuilderPage(props) {
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, [wordTip]);
+
+  useEffect(() => {
+    const inner = previewInnerRef.current;
+    const wrap  = previewWrapRef.current;
+    if (!inner || !wrap) return;
+    const update = () => {
+      const vw = window.innerWidth;
+      const scale = vw <= 640 ? 0.72 : vw <= 900 ? 0.85 : 1;
+      wrap.style.height = scale < 1 ? (inner.scrollHeight * scale) + "px" : "";
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(inner);
+    window.addEventListener("resize", update);
+    return () => { ro.disconnect(); window.removeEventListener("resize", update); };
+  }, [resume, templateId]);
 
   const sections = [
     { id: "personal", label: "Personal", icon: <User style={{ width: 14, height: 14 }} /> },
@@ -245,15 +263,15 @@ export default function BuilderPage(props) {
           <div style={{ width: "100%", maxWidth: "210mm" }}>
             <style>{`
               @media (max-width: 640px) {
-                #resume-preview-inner { transform: scale(0.72); transform-origin: top left; width: 138.9% !important; margin-bottom: calc((0.72 - 1) * 100%); }
+                #resume-preview-inner { transform: scale(0.72); transform-origin: top left; width: 138.9% !important; }
                 .bldr-preview-scale-wrap { overflow: hidden; }
               }
               @media (min-width: 641px) and (max-width: 900px) {
-                #resume-preview-inner { transform: scale(0.85); transform-origin: top left; width: 117.6% !important; margin-bottom: calc((0.85 - 1) * 100%); }
+                #resume-preview-inner { transform: scale(0.85); transform-origin: top left; width: 117.6% !important; }
               }
             `}</style>
-            <div className="bldr-preview-scale-wrap">
-              <div id="resume-preview-inner" style={{ background: "#fff", boxShadow: "0 8px 30px rgba(0,0,0,0.18)", width: "100%" }}>
+            <div className="bldr-preview-scale-wrap" ref={previewWrapRef}>
+              <div id="resume-preview-inner" ref={previewInnerRef} style={{ background: "#fff", boxShadow: "0 8px 30px rgba(0,0,0,0.18)", width: "100%" }}>
                 <Template r={resume} />
               </div>
             </div>
