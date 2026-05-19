@@ -169,11 +169,12 @@ async function exportPDF(resume) {
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>${css}</style>
   <style>
-    /* Vertical page margins give breathing room at the top/bottom of each page.
-       Left/right stay 0 so templates keep their full 210mm width — only height
-       per page reduces (297mm → 281mm with 8mm top + 8mm bottom).
-       This fixes the "content glued to page edge" look on multi-page resumes. */
-    @page { size: A4; margin: 8mm 0; }
+    /* @page :first has no top margin so page 1 matches the preview exactly.
+       All pages (including page 1) get 8mm bottom margin so content never
+       sits flush against the page edge before the cut.
+       Page 2+ also get 8mm top margin for breathing room at the start. */
+    @page       { size: A4; margin: 8mm 0; }
+    @page :first { margin-top: 0; }
     *, *::before, *::after { box-sizing: border-box; }
     /* Preserve background colours and images in print */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
