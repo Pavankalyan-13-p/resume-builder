@@ -115,7 +115,18 @@ export default function AuthModal({ mode = 'login', onClose, onSwitch, onSuccess
         setSuccess('Password reset email sent! Check your inbox (and spam folder).');
       }
     } catch (e) {
-      setError(getFirebaseError(e.code));
+      // When signing up with an email that already has an account, switch to
+      // login automatically so the user isn't left confused on the signup tab.
+      if (tab === 'signup' && e.code === 'auth/email-already-in-use') {
+        setTab('login');
+        setPassword(''); // clear so the login form starts clean
+        if (onSwitch) onSwitch('login');
+        setError('An account already exists with this email. Sign in below, or use "Continue with Google" if you registered with Google.');
+      } else if (tab === 'login' && e.code === 'auth/account-exists-with-different-credential') {
+        setError('This email is registered with Google. Use "Continue with Google" to sign in.');
+      } else {
+        setError(getFirebaseError(e.code));
+      }
     }
     setLoading(false);
   };
