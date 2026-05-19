@@ -9,7 +9,6 @@ dotenvConfig({ path: join(__dirname, '.env') });
 import express from "express";
 import puppeteer from "puppeteer";
 import cors from "cors";
-import helmet from "helmet";
 import crypto from "crypto";
 import Razorpay from "razorpay";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -17,10 +16,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security headers (X-Frame-Options, X-Content-Type-Options, etc.)
-// contentSecurityPolicy disabled — the PDF HTML payload and Google Fonts CDN
-// would require an overly permissive CSP that adds more risk than value here.
-app.use(helmet({ contentSecurityPolicy: false }));
+// Security headers — equivalent to helmet({ contentSecurityPolicy: false })
+app.use((_req, res, next) => {
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader("X-Download-Options", "noopen");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  res.setHeader("X-XSS-Protection", "0");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  next();
+});
 
 // CORS: in production the frontend is co-hosted on the same Express process
 // (same origin), so CORS is only needed for the local dev servers.
