@@ -19,9 +19,10 @@ export const db = initializeFirestore(app, {
   cache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
 });
 
-// Analytics is browser-only — guard against SSR / Vite SSR pre-render
+// Analytics is browser-only and only loaded on the real deployed site.
+// localhost and preview URLs are excluded to avoid polluting production stats.
 let analytics;
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
   analytics = getAnalytics(app);
 }
 export { analytics };

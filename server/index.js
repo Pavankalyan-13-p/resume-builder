@@ -9,19 +9,24 @@ dotenvConfig({ path: join(__dirname, '.env') });
 import express from "express";
 import puppeteer from "puppeteer";
 import cors from "cors";
+import helmet from "helmet";
 import crypto from "crypto";
 import Razorpay from "razorpay";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-// In production the frontend is served from the same Express process (same origin),
-// so reflect any origin. In dev restrict to the Vite dev server ports.
-const CORS_ORIGIN = process.env.NODE_ENV === 'production'
-  ? true
-  : (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173").split(",");
 
-app.use(cors({ origin: CORS_ORIGIN }));
+// Security headers (X-Frame-Options, X-Content-Type-Options, etc.)
+// contentSecurityPolicy disabled — the PDF HTML payload and Google Fonts CDN
+// would require an overly permissive CSP that adds more risk than value here.
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// CORS: in production the frontend is co-hosted on the same Express process
+// (same origin), so CORS is only needed for the local dev servers.
+// Never open to all origins in production — restrict to explicit allow-list.
+const CORS_ORIGIN = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173").split(",");
+app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 
 let browser = null;
@@ -555,6 +560,9 @@ const PLANS = {
 // Creates a Razorpay order and returns the orderId + public keyId to the frontend.
 // Secret key never leaves this file.
 app.post('/api/create-order', async (req, res) => {
+  if (!rateLimit(getIp(req), 10, 60_000 * 60))
+    return res.status(429).json({ error: 'Too many order requests. Please try again later.' });
+
   if (!razorpay)
     return res.status(503).json({ error: 'Payment not configured. Add Razorpay keys to server/.env' });
 
@@ -592,6 +600,9 @@ app.post('/api/create-order', async (req, res) => {
 //   Card:   4111 1111 1111 1111  Exp: any future  CVV: any
 //   UPI:    success@razorpay
 app.post('/api/verify-payment', (req, res) => {
+  if (!rateLimit(getIp(req), 15, 60_000 * 60))
+    return res.status(429).json({ error: 'Too many verification requests. Please try again later.' });
+
   if (!razorpay)
     return res.status(503).json({ error: 'Payment not configured.' });
 
