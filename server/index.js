@@ -16,7 +16,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security headers — equivalent to helmet({ contentSecurityPolicy: false })
+// Security headers
 app.use((_req, res, next) => {
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -26,8 +26,13 @@ app.use((_req, res, next) => {
   res.setHeader("X-XSS-Protection", "0");
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  // COOP must be unsafe-none (not same-origin) because Firebase signInWithPopup
+  // relies on window.opener messaging between our page and accounts.google.com.
+  // same-origin severs that link and breaks the Google OAuth popup on production
+  // (on localhost this is invisible because Vite dev server serves the frontend
+  // without this header, but in production Express serves everything).
+  res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
 });
 
@@ -645,8 +650,18 @@ app.get("/health", (_req, res) => {
 // static middleware. The wildcard fallback enables React Router client-side routing.
 if (process.env.NODE_ENV === 'production') {
   const distPath = join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
-  app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')));
+  // Vite content-hashes every JS/CSS/image filename, so these assets are safe
+  // to cache for a year. index.html is NOT hashed — force browsers to always
+  // revalidate it so a new deploy is picked up immediately.
+  app.use('/assets', express.static(join(distPath, 'assets'), {
+    maxAge: '1y',
+    immutable: true,
+  }));
+  app.use(express.static(distPath, { maxAge: 0, etag: true }));
+  app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(join(distPath, 'index.html'));
+  });
 }
 
 const shutdown = async () => {

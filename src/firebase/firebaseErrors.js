@@ -26,9 +26,10 @@ const ERROR_MAP = {
   'auth/cancelled-popup-request': 'Sign-in was cancelled.',
 
   // ── Network / config ───────────────────────────────────────────────────────
-  'auth/network-request-failed': 'Network error. Check your connection and try again.',
-  'auth/operation-not-allowed':  'This sign-in method is not enabled. Please contact support.',
-  'auth/internal-error':         'An internal error occurred. Please try again.',
+  'auth/network-request-failed':  'Network error. Check your connection and try again.',
+  'auth/operation-not-allowed':   'This sign-in method is not enabled. Please contact support.',
+  'auth/internal-error':          'An internal error occurred. Please try again.',
+  'auth/unauthorized-domain':     'Sign-in is not allowed from this domain. Please contact support.',
 
   // ── Re-authentication ──────────────────────────────────────────────────────
   'auth/requires-recent-login':  'Please sign in again before performing this action.',
