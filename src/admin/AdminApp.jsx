@@ -159,12 +159,10 @@ export default function AdminApp() {
         <aside className={`a-sidebar${sidebarOpen ? ' open' : ''}`} style={{ width:240, minWidth:240, background:'#1e293b', display:'flex', flexDirection:'column', position:'sticky', top:0, height:'100vh', flexShrink:0, zIndex:50 }}>
           <div style={{ padding:'1.1rem 1rem 0.9rem', borderBottom:'1px solid rgba(255,255,255,0.07)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ width:32, height:32, background:'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <Shield style={{ width:15, height:15, color:'#fff' }} />
-              </div>
+              <img src="/icon-circle.png" alt="Foliant AI" style={{ width:32, height:32, borderRadius:7, flexShrink:0 }} />
               <div>
-                <div style={{ color:'#f1f5f9', fontWeight:700, fontSize:'0.9rem', lineHeight:1 }}>Foliant</div>
-                <div style={{ color:'#475569', fontSize:'0.62rem', textTransform:'uppercase', letterSpacing:'0.1em', marginTop:2 }}>Admin</div>
+                <img src="/logo.png" alt="Foliant AI" style={{ height:18, width:'auto', filter:'brightness(0) invert(1)', opacity:0.9 }} />
+                <div style={{ color:'#475569', fontSize:'0.62rem', textTransform:'uppercase', letterSpacing:'0.1em', marginTop:2 }}>Admin Panel</div>
               </div>
             </div>
             <button onClick={() => setSidebar(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#64748b', padding:4 }}>
@@ -213,7 +211,7 @@ export default function AdminApp() {
               </span>
             </div>
             <div style={{ fontSize:'0.72rem', color:'#94a3b8' }}>
-              Foliant Admin · <span style={{ color:'#6366f1', fontWeight:600 }}>{currentUser.email}</span>
+              Foliant AI Admin · <span style={{ color:'#6366f1', fontWeight:600 }}>{currentUser.email}</span>
             </div>
           </div>
 

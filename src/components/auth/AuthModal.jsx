@@ -146,20 +146,21 @@ export default function AuthModal({ mode = 'login', onClose, onSwitch, onSuccess
 
         {/* Header */}
         <div style={{ padding: '1.5rem 1.5rem 1rem', borderBottom: '1px solid #f0f0f0' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {tab === 'forgot' && (
-                <button onClick={() => switchTab('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#888' }}>
-                  <ArrowLeft style={{ width: 16, height: 16 }} />
-                </button>
-              )}
-              <h2 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: '1.4rem', fontWeight: 700, color: '#1a2e4a', margin: 0 }}>
-                {titles[tab]}
-              </h2>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+            <img src="/logo.png" alt="Foliant AI" style={{ height: 32, width: 'auto' }} />
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#aaa', flexShrink: 0 }}>
               <X style={{ width: 18, height: 18 }} />
             </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            {tab === 'forgot' && (
+              <button onClick={() => switchTab('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#888' }}>
+                <ArrowLeft style={{ width: 16, height: 16 }} />
+              </button>
+            )}
+            <h2 style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontSize: '1.4rem', fontWeight: 700, color: '#1a2e4a', margin: 0 }}>
+              {titles[tab]}
+            </h2>
           </div>
           <p style={{ fontSize: '0.82rem', color: '#888', margin: 0 }}>{subtitles[tab]}</p>
         </div>

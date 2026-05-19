@@ -75,12 +75,8 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
 
       {/* NAV */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderBottom: "1px solid rgba(232,232,232,0.7)", padding: "0 2.5rem", height: "64px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ width: 34, height: 34, background: "linear-gradient(135deg, #1a2e4a, #312e81)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Sparkles style={{ width: 16, height: 16, color: "#fff" }} />
-          </div>
-          <span style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontWeight: 700, fontSize: "1.15rem", color: "#1a2e4a", letterSpacing: "-0.01em" }}>Foliant</span>
-          <span style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#4f46e5", background: "#ede9fe", padding: "2px 6px" }}>AI</span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <img src="/logo.png" alt="Foliant AI" style={{ height: 38, width: "auto" }} />
         </div>
         <div className="hp-nav-links" style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
           <a href="#features" className="hp-nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
@@ -716,12 +712,8 @@ export default function HomePage({ user, onSignIn, onSignUp, onLogout, onStart, 
 
       {/* FOOTER */}
       <footer style={{ background: "#fafaf9", borderTop: "1px solid #e8e8e8", padding: "1.5rem 2.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem 1.25rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ width: 26, height: 26, background: "linear-gradient(135deg, #1a2e4a, #312e81)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Sparkles style={{ width: 13, height: 13, color: "#fff" }} />
-          </div>
-          <span style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontWeight: 700, color: "#1a2e4a" }}>Foliant</span>
-          <span style={{ color: "#bbb", fontSize: "0.8rem" }}>· AI Resume Builder</span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <img src="/logo.png" alt="Foliant AI" style={{ height: 30, width: "auto" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.5rem 1rem" }}>
           <a href="/privacy" style={{ color: "#aaa", fontSize: "0.8rem", textDecoration: "none", transition: "color 0.15s" }}

@@ -57,11 +57,8 @@ export default function BuilderPage(props) {
             <ArrowLeft style={{ width: 13, height: 13 }} /> Home
           </button>
           <div className="bldr-divider" style={{ width: "1px", height: "24px", background: "#e5e5e5" }}></div>
-          <div className="bldr-logo" style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-            <div style={{ width: 28, height: 28, background: "#1a2e4a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <FileText style={{ width: 13, height: 13, color: "#fff" }} />
-            </div>
-            <span style={{ fontFamily: "'Source Serif Pro', Georgia, serif", fontWeight: 700, fontSize: "0.95rem", color: "#1a2e4a" }}>Foliant</span>
+          <div className="bldr-logo">
+            <img src="/logo.png" alt="Foliant AI" style={{ height: 30, width: "auto" }} />
           </div>
           <div className="bldr-save" style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", color: "#aaa", marginLeft: "4px" }}>
             <Clock style={{ width: 11, height: 11 }} />
