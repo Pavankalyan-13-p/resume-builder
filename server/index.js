@@ -36,11 +36,31 @@ app.use((_req, res, next) => {
   next();
 });
 
-// CORS: in production the frontend is co-hosted on the same Express process
-// (same origin), so CORS is only needed for the local dev servers.
-// Never open to all origins in production — restrict to explicit allow-list.
-const CORS_ORIGIN = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173").split(",");
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+// CORS — restricted to an explicit allow-list.
+// Set ALLOWED_ORIGINS in the Render environment dashboard (comma-separated, no spaces):
+//   https://<your-vercel-app>.vercel.app,http://localhost:5173,http://localhost:4173
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173")
+    .split(",")
+    .map(o => o.trim())
+    .filter(Boolean)
+);
+console.log("[cors] allowed origins:", [...ALLOWED_ORIGINS].join(", "));
+
+const corsOptions = {
+  origin(origin, cb) {
+    // Allow server-to-server / curl / Postman (no Origin header)
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.has(origin)) return cb(null, true);
+    console.warn(`[cors] blocked origin: ${origin}`);
+    cb(Object.assign(new Error(`CORS: origin not allowed — ${origin}`), { status: 403 }));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // explicit OPTIONS preflight for all routes
 app.use(express.json({ limit: "10mb" }));
 
 let browser = null;
