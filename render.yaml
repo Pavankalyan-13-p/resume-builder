@@ -10,3 +10,5 @@ services:
         value: /opt/render/.cache/puppeteer
       - key: NODE_ENV
         value: production
+      - key: ALLOWED_ORIGINS
+        value: https://resume-builder-taupe-six-52.vercel.app,http://localhost:5173,http://localhost:4173
